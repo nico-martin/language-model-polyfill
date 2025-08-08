@@ -4,9 +4,9 @@ const button = document.getElementById("btn") as HTMLButtonElement;
 
 if (button) {
   button.addEventListener("click", async () => {
-    const availablilty = await LanguageModel.availability();
-    console.log(availablilty);
-    if (availablilty === "unavailable") {
+    const availability = await LanguageModel.availability();
+    console.log(availability);
+    if (availability === "unavailable") {
       alert("Model not available");
       return;
     }
