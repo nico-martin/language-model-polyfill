@@ -1,0 +1,44 @@
+{
+  "name": "prompt-api-polyfill",
+  "version": "0.0.1",
+  "description": "A Polyfill for the Prompt API (window.LanguageModel) based on Transformers.js",
+  "main": "dist/prompt-api-polyfill.cjs.js",
+  "module": "dist/prompt-api-polyfill.es.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/prompt-api-polyfill.cjs.js",
+      "import": "./dist/prompt-api-polyfill.es.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "clean": "rimraf dist",
+    "build": "npm run clean && node build.mjs && tsc -p tsconfig.build.json",
+    "deploy": "node scripts/updateVersion.mjs patch && npm run build && npm publish"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^3.7.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.8",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.0.1",
+    "terser": "^5.43.1",
+    "typescript": "^5.9.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/nico-martin/prompt-api-polyfill.git"
+  },
+  "author": "Nico Martin <mail@nico.dev>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/nico-martin/prompt-api-polyfill/issues"
+  },
+  "homepage": "https://github.com/nico-martin/prompt-api-polyfill#readme"
+}
