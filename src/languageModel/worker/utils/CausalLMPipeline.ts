@@ -5,19 +5,19 @@ import {
   PreTrainedTokenizer,
   ProgressCallback,
 } from "@huggingface/transformers";
+import { MODEL } from "../../../constants";
 
-class TextGenerationPipeline {
-  static model_id = "onnx-community/Qwen3-4B-ONNX"; //"HuggingFaceTB/SmolLM3-3B-ONNX";
+class CausalLMPipeline {
   static tokenizer: Promise<PreTrainedTokenizer>;
   static model: Promise<PreTrainedModel>;
 
   static async getInstance(progress_callback: ProgressCallback = null) {
-    this.tokenizer ??= AutoTokenizer.from_pretrained(this.model_id, {
+    this.tokenizer ??= AutoTokenizer.from_pretrained(MODEL.id, {
       progress_callback,
     });
 
-    this.model ??= AutoModelForCausalLM.from_pretrained(this.model_id, {
-      dtype: "q4f16",
+    this.model ??= AutoModelForCausalLM.from_pretrained(MODEL.id, {
+      dtype: MODEL.dtype,
       device: "webgpu",
       progress_callback,
     });
@@ -26,4 +26,4 @@ class TextGenerationPipeline {
   }
 }
 
-export default TextGenerationPipeline;
+export default CausalLMPipeline;
