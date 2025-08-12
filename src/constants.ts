@@ -17,16 +17,6 @@ interface ModelDefinition {
 
 export type ModelIds = "Qwen3-4B" | "SmolLM3-3B";
 
-const t = {
-  "tokenizer.json": { loaded: 11574059, total: 11574059 },
-  "tokenizer_config.json": { loaded: 56256, total: 56256 },
-  "config.json": { loaded: 2056, total: 2056 },
-  "onnx/model_q4f16.onnx": { loaded: 301534, total: 301534 },
-  "generation_config.json": { loaded: 182, total: 182 },
-  "onnx/model_q4f16.onnx_data_1": { loaded: 0, total: 0 },
-  "onnx/model_q4f16.onnx_data": { loaded: 2124320768, total: 2124320768 },
-};
-
 export const MODELS: Record<ModelIds, ModelDefinition> = {
   "SmolLM3-3B": {
     id: "HuggingFaceTB/SmolLM3-3B-ONNX",
@@ -39,7 +29,7 @@ export const MODELS: Record<ModelIds, ModelDefinition> = {
       "generation_config.json": 182,
       "onnx/model_q4f16.onnx_data": 2124320768,
     },
-    maxToken: 1000,
+    maxToken: 10000,
     maxNewTokens: 1500,
   },
   "Qwen3-4B": {
@@ -54,7 +44,7 @@ export const MODELS: Record<ModelIds, ModelDefinition> = {
       "onnx/model_q4f16.onnx_data_1": 677150720,
       "onnx/model_q4f16.onnx_data": 2096005120,
     },
-    maxToken: 1000,
+    maxToken: 10000,
     maxNewTokens: 1500,
   },
 };
