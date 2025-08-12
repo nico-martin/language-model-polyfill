@@ -23,6 +23,7 @@ const prompt = async ({
   top_k,
   is_init_cache,
   model_id,
+  abortSignal,
 }: {
   tokenizer: PreTrainedTokenizer;
   model: PreTrainedModel;
@@ -33,6 +34,7 @@ const prompt = async ({
   top_k: number;
   is_init_cache: boolean;
   model_id: ModelIds;
+  abortSignal?: AbortSignal;
 }) => {
   const input_start_time: DOMHighResTimeStamp = performance.now();
   const inputs = tokenizer.apply_chat_template(messages, {
@@ -87,6 +89,10 @@ const prompt = async ({
   };
 
   const callback_function = (output: string) => {
+    if (abortSignal?.aborted) {
+      stopping_criteria.interrupt();
+      throw new DOMException("Request cancelled", "AbortError");
+    }
     answer = answer + output;
     on_response_update(output);
   };

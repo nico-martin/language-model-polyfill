@@ -12,6 +12,8 @@ import prompt from "./worker/utils/prompt";
 import { WorkerError, WorkerErrorCode } from "./worker/utils/WorkerError";
 
 const cache = new KVCache();
+const activePromptRequests = new Map<string, AbortController>();
+const activeModelLoadRequests = new Map<string, AbortController>();
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
   const request = event.data;
@@ -27,55 +29,135 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
         return;
       }
       case RequestType.LOAD_MODEL: {
-        await CausalLMPipeline.getInstance(request.model_id, (progressInfo) => {
+        const abortController = new AbortController();
+        activeModelLoadRequests.set(request.id, abortController);
+
+        try {
+          await CausalLMPipeline.getInstance(
+            request.model_id,
+            (progressInfo) => {
+              if (abortController.signal.aborted) {
+                throw new DOMException("Request cancelled", "AbortError");
+              }
+              postMessage({
+                id: request.id,
+                type: ResponseType.LOAD_MODEL_PROGRESS,
+                progress: progressInfo,
+              });
+            },
+            abortController.signal,
+          );
+
+          activeModelLoadRequests.delete(request.id);
           postMessage({
             id: request.id,
-            type: ResponseType.LOAD_MODEL_PROGRESS,
-            progress: progressInfo,
+            type: ResponseType.MODEL_LOADED,
           });
-        });
-        postMessage({
-          id: request.id,
-          type: ResponseType.MODEL_LOADED,
-        });
+        } catch (error) {
+          activeModelLoadRequests.delete(request.id);
+          if (error instanceof DOMException && error.name === "AbortError") {
+            postMessage({
+              id: request.id,
+              type: ResponseType.PROMPT_CANCELLED,
+              message: "Model loading was cancelled",
+            });
+          } else {
+            throw error; // Re-throw to be handled by outer catch
+          }
+        }
         return;
       }
       case RequestType.PROMPT: {
-        const [tokenizer, model] = await CausalLMPipeline.getInstance(
-          request.model_id,
-          (progressInfo) => {
-            postMessage({
-              id: request.id,
-              type: ResponseType.LOAD_MODEL_PROGRESS,
-              progress: progressInfo,
-            });
-          },
-        );
+        const abortController = new AbortController();
+        activePromptRequests.set(request.id, abortController);
 
-        const resp = await prompt({
-          tokenizer,
-          model,
-          messages: request.messages,
-          cache,
-          on_response_update: (token_generated: string) => {
-            postMessage({
-              id: request.id,
-              type: ResponseType.PROMPT_PROGRESS,
-              token_generated,
-            });
-          },
-          temperature: request.temperature,
-          top_k: request.top_k,
-          is_init_cache: request.is_init_cache,
-          model_id: request.model_id,
-        });
-        postMessage({
-          id: request.id,
-          type: ResponseType.PROMPT_DONE,
-          response: resp.answer,
-          messages: resp.newMessages,
-          usage: resp.usage,
-        });
+        try {
+          const [tokenizer, model] = await CausalLMPipeline.getInstance(
+            request.model_id,
+            (progressInfo) => {
+              // Check if request was cancelled
+              if (abortController.signal.aborted) {
+                throw new DOMException("Request cancelled", "AbortError");
+              }
+              postMessage({
+                id: request.id,
+                type: ResponseType.LOAD_MODEL_PROGRESS,
+                progress: progressInfo,
+              });
+            },
+            abortController.signal,
+          );
+
+          const resp = await prompt({
+            tokenizer,
+            model,
+            messages: request.messages,
+            cache,
+            on_response_update: (token_generated: string) => {
+              // Check if request was cancelled
+              if (abortController.signal.aborted) {
+                throw new DOMException("Request cancelled", "AbortError");
+              }
+              postMessage({
+                id: request.id,
+                type: ResponseType.PROMPT_PROGRESS,
+                token_generated,
+              });
+            },
+            temperature: request.temperature,
+            top_k: request.top_k,
+            is_init_cache: request.is_init_cache,
+            model_id: request.model_id,
+            abortSignal: abortController.signal,
+          });
+
+          activePromptRequests.delete(request.id);
+          postMessage({
+            id: request.id,
+            type: ResponseType.PROMPT_DONE,
+            response: resp.answer,
+            messages: resp.newMessages,
+            usage: resp.usage,
+          });
+        } catch (error) {
+          activePromptRequests.delete(request.id);
+          throw error; // Re-throw to be handled by outer catch
+        }
+        return;
+      }
+      case RequestType.CANCEL: {
+        // Check for active prompt request
+        const promptAbortController = activePromptRequests.get(request.id);
+        if (promptAbortController) {
+          promptAbortController.abort();
+          activePromptRequests.delete(request.id);
+          postMessage({
+            id: request.id,
+            type: ResponseType.CANCELLED,
+            message: "Prompt request cancelled successfully",
+          });
+          return;
+        }
+
+        // Check for active model load request
+        const modelAbortController = activeModelLoadRequests.get(request.id);
+        if (modelAbortController) {
+          modelAbortController.abort();
+          activeModelLoadRequests.delete(request.id);
+          postMessage({
+            id: request.id,
+            type: ResponseType.CANCELLED,
+            message: "Model loading cancelled successfully",
+          });
+          return;
+        }
+
+        // No active request found
+        const cancelError = new WorkerError(
+          WorkerErrorCode.NO_HANDLER,
+          `No active request found with id: ${request.id}`,
+        );
+        postMessage(cancelError.toErrorResponse(request.id));
         return;
       }
       default:

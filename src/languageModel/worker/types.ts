@@ -16,6 +16,7 @@ export enum RequestType {
   CHECK_AVAILABILITY,
   LOAD_MODEL,
   PROMPT,
+  CANCEL,
 }
 
 export enum ResponseType {
@@ -25,6 +26,7 @@ export enum ResponseType {
   MODEL_LOADED,
   PROMPT_DONE,
   PROMPT_PROGRESS,
+  CANCELLED,
 }
 
 /**
@@ -45,6 +47,10 @@ interface PromptRequest extends BaseRequest {
   temperature: number;
   top_k: number;
   is_init_cache: boolean;
+}
+
+interface CancelRequest extends BaseRequest {
+  type: RequestType.CANCEL;
 }
 
 /**
@@ -86,10 +92,16 @@ export interface ErrorResponse extends BaseResponse {
   };
 }
 
+interface PromptCancelledResponse extends BaseResponse {
+  type: ResponseType.CANCELLED;
+  message: string;
+}
+
 export type WorkerRequest =
   | CheckAvailabilityRequest
   | LoadModelRequest
-  | PromptRequest;
+  | PromptRequest
+  | CancelRequest;
 
 export type WorkerResponse =
   | AvailabilityResponse
@@ -97,7 +109,8 @@ export type WorkerResponse =
   | ModelLoadedResponse
   | ModelLoadingProgressResponse
   | PromptProgressResponse
-  | PromptDoneResponse;
+  | PromptDoneResponse
+  | PromptCancelledResponse;
 
 export interface ModelUsage {
   input_tokens: number;

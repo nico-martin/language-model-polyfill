@@ -39,7 +39,7 @@ if (button) {
       initialPrompts: [
         {
           role: "system",
-          content: "You are Felix, a helpful and friendly assistant.",
+          content: "You are Alfred, a helpful and friendly assistant.",
         },
       ],
     });

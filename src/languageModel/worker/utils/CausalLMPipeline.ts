@@ -14,6 +14,7 @@ class CausalLMPipeline {
   static async getInstance(
     model_id: ModelIds,
     progress_callback: ProgressCallback = null,
+    abortSignal?: AbortSignal,
   ): Promise<[PreTrainedTokenizer, PreTrainedModel]> {
     if (!(model_id in MODELS)) {
       throw new Error(
@@ -30,12 +31,14 @@ class CausalLMPipeline {
     ) {
       const tokenizer = AutoTokenizer.from_pretrained(MODEL.id, {
         progress_callback,
+        ...(abortSignal && { signal: abortSignal }),
       });
 
       const model = AutoModelForCausalLM.from_pretrained(MODEL.id, {
         dtype: MODEL.dtype,
         device: "webgpu",
         progress_callback,
+        ...(abortSignal && { signal: abortSignal }),
       });
 
       const loaded = await Promise.all([tokenizer, model]);

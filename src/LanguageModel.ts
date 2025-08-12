@@ -87,9 +87,6 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   ): Promise<string> {
     this.ensureNotDestroyed();
 
-    //const usage = await this.measureInputUsage(input, options);
-    //this.updateInputUsage(usage);
-
     const messages = this.processPromptInput(input);
     this._conversationHistory.push(...messages);
 
