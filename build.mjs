@@ -10,7 +10,7 @@ const mainConfig = {
   plugins: [esbuildRawPlugin()],
 };
 
-await build({
+/*await build({
   ...mainConfig,
   outfile: "dist/worker.compiled.js",
   platform: "browser",
@@ -20,16 +20,13 @@ await build({
   define: {
     __IS_WORKER__: "true",
   },
-});
+});*/
 
 const polyfillConfig = {
   ...mainConfig,
   entryPoints: ["src/index.ts"],
   platform: "neutral",
   external: ["react"],
-  define: {
-    __IS_WORKER__: "false",
-  },
 };
 
 await build({

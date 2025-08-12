@@ -4,11 +4,12 @@ import {
   PreTrainedModel,
   PreTrainedTokenizer,
   Tensor,
+  InterruptableStoppingCriteria,
+  TextStreamer,
 } from "@huggingface/transformers";
 import { ModelUsage } from "../types";
 import { ModelIds, MODELS } from "../../../constants";
 import { WorkerError, WorkerErrorCode } from "./WorkerError";
-import getPipeline from "../../../utils/getPipeline";
 
 let stopping_criteria: any = null;
 
@@ -42,7 +43,6 @@ const prompt = async (params: {
   } = params;
 
   if (!stopping_criteria) {
-    const { InterruptableStoppingCriteria } = await getPipeline();
     stopping_criteria = new InterruptableStoppingCriteria();
   }
 
@@ -107,7 +107,6 @@ const prompt = async (params: {
     on_response_update(output);
   };
 
-  const { TextStreamer } = await getPipeline();
   const streamer = new TextStreamer(tokenizer, {
     skip_prompt: true,
     skip_special_tokens: true,

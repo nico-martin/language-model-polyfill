@@ -10,6 +10,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     maxTemperature: 2,
   };
   public static model_id: ModelIds = "SmolLM3-3B";
+  public static worker: Worker;
   private _inputUsage = 0;
   private _inputQuota = 0;
   private _topK = LanguageModel.defaultParams.defaultTopK;
@@ -52,7 +53,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     >,
   ): Promise<LanguageModel> {
     const instance = new LanguageModel();
-    instance.model = new TransformersJsModel(this.model_id);
+    instance.model = new TransformersJsModel(this.worker, this.model_id);
     instance._inputQuota = instance.model.maxToken;
 
     // @ts-expect-error
@@ -200,7 +201,8 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   static async availability(
     options?: LanguageModelCreateCoreOptions,
   ): Promise<Availability> {
-    return TransformersJsModel.availability();
+    const instance = new TransformersJsModel(this.worker, this.model_id);
+    return instance.availability();
   }
 
   static async params(): Promise<LanguageModelParams> {

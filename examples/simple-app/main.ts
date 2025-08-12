@@ -3,10 +3,15 @@ import { LanguageModel as TFLanguageModel } from "../../src";
 const output = document.getElementById("output") as HTMLParagraphElement;
 const buttonAbort = document.getElementById("btnAbort") as HTMLButtonElement;
 const button = document.getElementById("btn") as HTMLButtonElement;
+const worker = new Worker(new URL("./worker.ts", import.meta.url), {
+  type: "module",
+});
 
 let abortController = new AbortController();
 
 //TFLanguageModel.model_id = "Qwen3-4B";
+TFLanguageModel.worker = worker;
+
 buttonAbort.addEventListener("click", () => {
   abortController.abort();
   abortController = new AbortController();
