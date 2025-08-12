@@ -8,7 +8,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     maxTemperature: 2,
   };
   private _inputUsage = 0;
-  private _inputQuota = 1000;
+  private _inputQuota = 0;
   private _topK = LanguageModel.defaultParams.defaultTopK;
   private _temperature = LanguageModel.defaultParams.defaultTemperature;
   private _destroyed = false;
@@ -45,6 +45,8 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   ): Promise<LanguageModel> {
     const instance = new LanguageModel();
     instance.model = new TransformersJsModel();
+    instance._inputQuota = instance.model.maxToken;
+
     // @ts-expect-error
     if (options?.tools || options?.expectedInputs || options?.expectedOutputs) {
       throw new Error(
@@ -98,6 +100,8 @@ class LanguageModel extends EventTarget implements DestroyableModel {
       false,
     );
 
+    this.updateInputUsage(response.usage.total_tokens);
+
     this._conversationHistory = response.messages as LanguageModelMessage[];
 
     return response.response;
@@ -120,10 +124,12 @@ class LanguageModel extends EventTarget implements DestroyableModel {
             this._temperature,
             this._topK,
             false,
-            (token_generated: string) => {
+            (token_generated) => {
               controller.enqueue(token_generated);
             },
           );
+
+          this.updateInputUsage(response.usage.total_tokens);
 
           this._conversationHistory =
             response.messages as LanguageModelMessage[];
@@ -182,7 +188,8 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   }
 
   private updateInputUsage(tokens: number): void {
-    this._inputUsage += tokens;
+    this._inputUsage = tokens;
+    console.log("updateInputUsage", this._inputUsage);
     if (this._inputUsage > this._inputQuota && this.onquotaoverflow) {
       const event = new Event("quotaoverflow");
       this.onquotaoverflow.call(this, event);

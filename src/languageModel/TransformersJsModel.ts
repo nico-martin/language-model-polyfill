@@ -1,4 +1,5 @@
 import {
+  ModelUsage,
   RequestType,
   ResponseType,
   WorkerRequest,
@@ -20,6 +21,10 @@ class TransformersJsModel {
 
   public constructor(model_id: ModelIds = "Qwen3-4B") {
     this.model_id = model_id;
+  }
+
+  public get maxToken() {
+    return MODELS[this.model_id].maxToken;
   }
 
   public async loadModel(
@@ -132,9 +137,13 @@ class TransformersJsModel {
     temperature: number,
     top_k: number,
     is_init_cache: boolean,
-    onResponseUpdate: (token_generated: string) => void = () => {},
+    onResponseUpdate: (response: string) => void = () => {},
     options?: LanguageModelPromptOptions,
-  ): Promise<{ response: string; messages: Array<Message> }> {
+  ): Promise<{
+    response: string;
+    messages: Array<Message>;
+    usage: ModelUsage;
+  }> {
     return new Promise((resolve, reject) => {
       const requestId = (workerRequestId++).toString();
       const listener = (e: MessageEvent<WorkerResponse>) => {
@@ -151,7 +160,11 @@ class TransformersJsModel {
 
         if (e.data.type === ResponseType.PROMPT_DONE) {
           worker.removeEventListener("message", listener);
-          resolve({ response: e.data.response, messages: e.data.messages });
+          resolve({
+            response: e.data.response,
+            messages: e.data.messages,
+            usage: e.data.usage,
+          });
         }
       };
 

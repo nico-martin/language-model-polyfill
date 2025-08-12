@@ -28,7 +28,7 @@ const prompt = async ({
   model: PreTrainedModel;
   messages: Array<Message>;
   cache: KVCache;
-  on_response_update: (partial_response: string) => void;
+  on_response_update: (token: string) => void;
   temperature: number;
   top_k: number;
   is_init_cache: boolean;
@@ -135,9 +135,8 @@ const prompt = async ({
     output_tokens: num_tokens,
     output_duration_ms: done_time - first_token_time,
     output_tps: tps,
+    total_tokens: input_size + num_tokens,
   };
-
-  console.log("USAGE", usage);
 
   return {
     answer,

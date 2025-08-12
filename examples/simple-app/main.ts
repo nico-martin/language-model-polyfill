@@ -34,7 +34,7 @@ if (button) {
       ],
     });*/
 
-    const modelTwo = await TFLanguageModel.create({
+    const session = await TFLanguageModel.create({
       temperature: 2,
       initialPrompts: [
         {
@@ -44,7 +44,13 @@ if (button) {
       ],
     });
 
-    const stream = modelTwo.promptStreaming("Write me an extra-long poem!");
+    session.addEventListener("quotaoverflow", () => {
+      console.log(
+        "We've gone past the quota, and some inputs will be dropped!",
+      );
+    });
+
+    const stream = session.promptStreaming("Write me an short poem!");
     const reader = stream.getReader();
 
     let reply = "";
@@ -54,6 +60,13 @@ if (button) {
       reply += value;
       output.textContent = reply;
     }
+
+    console.log(`${session.inputUsage}/${session.inputQuota}`);
+    /*for (let i = 1; i <= 100; ++i) {
+      const answer = await session.prompt("Who is the hero in this poem");
+      console.log(answer);
+      console.log(`${session.inputUsage}/${session.inputQuota}`);
+    }*/
 
     /*console.log("Who are you?");
     console.log(await model.prompt("Who are you?"));

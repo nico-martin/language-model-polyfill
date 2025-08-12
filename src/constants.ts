@@ -30,7 +30,7 @@ export const MODELS: Record<ModelIds, ModelDefinition> = {
       "onnx/model_q4f16.onnx_data_1": 677150720,
       "onnx/model_q4f16.onnx_data": 2096005120,
     },
-    maxToken: 10000,
-    maxNewTokens: 1500,
+    maxToken: 1000,
+    maxNewTokens: 1500, // todo: I think this does not depend on the model but on the device.
   },
 };

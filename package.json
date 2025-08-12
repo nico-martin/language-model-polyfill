@@ -1,15 +1,15 @@
 {
-  "name": "prompt-api-polyfill",
+  "name": "language-model-polyfill",
   "version": "0.0.1",
   "description": "A Polyfill for the Prompt API (window.LanguageModel) based on Transformers.js",
-  "main": "dist/prompt-api-polyfill.cjs.js",
-  "module": "dist/prompt-api-polyfill.es.js",
+  "main": "dist/language-model-polyfill.cjs.js",
+  "module": "dist/language-model-polyfill.es.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "require": "./dist/prompt-api-polyfill.cjs.js",
-      "import": "./dist/prompt-api-polyfill.es.js"
+      "require": "./dist/language-model-polyfill.cjs.js",
+      "import": "./dist/language-model-polyfill.es.js"
     }
   },
   "files": [
@@ -35,12 +35,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/nico-martin/prompt-api-polyfill.git"
+    "url": "git+ssh://git@github.com/nico-martin/language-model-polyfill.git"
   },
   "author": "Nico Martin <mail@nico.dev>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/nico-martin/prompt-api-polyfill/issues"
+    "url": "https://github.com/nico-martin/language-model-polyfill/issues"
   },
-  "homepage": "https://github.com/nico-martin/prompt-api-polyfill#readme"
+  "homepage": "https://github.com/nico-martin/language-model-polyfill#readme"
 }
