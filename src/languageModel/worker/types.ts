@@ -120,4 +120,5 @@ export interface ModelUsage {
   output_duration_ms: number;
   output_tps: number;
   total_tokens: number;
+  model_id: ModelIds;
 }

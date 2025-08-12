@@ -126,7 +126,7 @@ const prompt = async ({
     ...messages,
     {
       role: "assistant",
-      content: answer,
+      content: is_init_cache ? "" : answer,
     },
   ];
 
@@ -142,6 +142,7 @@ const prompt = async ({
     output_duration_ms: done_time - first_token_time,
     output_tps: tps,
     total_tokens: input_size + num_tokens,
+    model_id,
   };
 
   return {

@@ -1,4 +1,6 @@
 import TransformersJsModel from "./languageModel/TransformersJsModel";
+import { ModelUsage } from "./languageModel/worker/types";
+import { ModelIds } from "./constants";
 
 class LanguageModel extends EventTarget implements DestroyableModel {
   private static defaultParams: LanguageModelParams = {
@@ -7,6 +9,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     defaultTemperature: 1,
     maxTemperature: 2,
   };
+  public static model_id: ModelIds = "SmolLM3-3B";
   private _inputUsage = 0;
   private _inputQuota = 0;
   private _topK = LanguageModel.defaultParams.defaultTopK;
@@ -16,6 +19,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   private _conversationHistory: Array<
     LanguageModelMessage | LanguageModelSystemMessage
   > = [];
+  private _latestUsage: ModelUsage = null;
 
   public onquotaoverflow: ((this: LanguageModel, ev: Event) => any) | null =
     null;
@@ -33,6 +37,10 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     return this._temperature;
   }
 
+  get latestUsage(): ModelUsage {
+    return this._latestUsage;
+  }
+
   private constructor() {
     super();
   }
@@ -44,7 +52,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     >,
   ): Promise<LanguageModel> {
     const instance = new LanguageModel();
-    instance.model = new TransformersJsModel();
+    instance.model = new TransformersJsModel(this.model_id);
     instance._inputQuota = instance.model.maxToken;
 
     // @ts-expect-error
@@ -72,6 +80,20 @@ class LanguageModel extends EventTarget implements DestroyableModel {
       await instance.model.loadModel(undefined, options?.signal);
     }
 
+    // build the KVCache
+    const response = await instance.model.prompt(
+      instance._conversationHistory,
+      instance._temperature,
+      instance._topK,
+      true,
+      () => {},
+      {
+        signal: options?.signal,
+      },
+    );
+    instance.updateUsage(response.usage);
+    instance._conversationHistory = response.messages as LanguageModelMessage[];
+
     return instance;
   }
 
@@ -95,10 +117,11 @@ class LanguageModel extends EventTarget implements DestroyableModel {
       this._temperature,
       this._topK,
       false,
+      () => {},
+      options,
     );
 
-    this.updateInputUsage(response.usage.total_tokens);
-
+    this.updateUsage(response.usage);
     this._conversationHistory = response.messages as LanguageModelMessage[];
 
     return response.response;
@@ -124,10 +147,10 @@ class LanguageModel extends EventTarget implements DestroyableModel {
             (token_generated) => {
               controller.enqueue(token_generated);
             },
+            options,
           );
 
-          this.updateInputUsage(response.usage.total_tokens);
-
+          this.updateUsage(response.usage);
           this._conversationHistory =
             response.messages as LanguageModelMessage[];
 
@@ -184,9 +207,9 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     return new Promise((resolve) => resolve(this.defaultParams));
   }
 
-  private updateInputUsage(tokens: number): void {
-    this._inputUsage = tokens;
-    console.log("updateInputUsage", this._inputUsage);
+  private updateUsage(usage: ModelUsage): void {
+    this._inputUsage = usage.total_tokens;
+    this._latestUsage = usage;
     if (this._inputUsage > this._inputQuota && this.onquotaoverflow) {
       const event = new Event("quotaoverflow");
       this.onquotaoverflow.call(this, event);

@@ -19,7 +19,7 @@ let workerRequestId = 0;
 class TransformersJsModel {
   private model_id: ModelIds;
 
-  public constructor(model_id: ModelIds = "Qwen3-4B") {
+  public constructor(model_id: ModelIds = "SmolLM3-3B") {
     this.model_id = model_id;
   }
 
@@ -79,9 +79,14 @@ class TransformersJsModel {
       const listener = (e: MessageEvent<WorkerResponse>) => {
         if (e.data.id !== requestId) return;
 
-        if (e.data.type === ResponseType.ERROR) {
+        if (
+          e.data.type === ResponseType.ERROR ||
+          e.data.type === ResponseType.CANCELLED
+        ) {
           worker.removeEventListener("message", listener);
-          reject(e.data.error);
+          reject(
+            e.data.type === ResponseType.ERROR ? e.data.error : e.data.message,
+          );
         }
 
         if (e.data.type === ResponseType.MODEL_LOADED) {
@@ -129,6 +134,14 @@ class TransformersJsModel {
         type: RequestType.LOAD_MODEL,
         model_id: this.model_id,
       });
+
+      signal.onabort = () => {
+        postMessage({
+          id: requestId,
+          type: RequestType.CANCEL,
+          model_id: this.model_id,
+        });
+      };
     });
   }
 
@@ -149,9 +162,14 @@ class TransformersJsModel {
       const listener = (e: MessageEvent<WorkerResponse>) => {
         if (e.data.id !== requestId) return;
 
-        if (e.data.type === ResponseType.ERROR) {
+        if (
+          e.data.type === ResponseType.ERROR ||
+          e.data.type === ResponseType.CANCELLED
+        ) {
           worker.removeEventListener("message", listener);
-          reject(e.data.error);
+          reject(
+            e.data.type === ResponseType.ERROR ? e.data.error : e.data.message,
+          );
         }
 
         if (e.data.type === ResponseType.PROMPT_PROGRESS) {
@@ -182,6 +200,16 @@ class TransformersJsModel {
         is_init_cache,
         model_id: this.model_id,
       });
+
+      if (options?.signal) {
+        options.signal.onabort = () => {
+          postMessage({
+            id: requestId,
+            type: RequestType.CANCEL,
+            model_id: this.model_id,
+          });
+        };
+      }
     });
   }
 
