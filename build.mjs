@@ -15,8 +15,9 @@ await build({
   outfile: "dist/worker.compiled.js",
   platform: "browser",
   format: "esm",
-  external: ["@huggingface/transformers"],
-  entryPoints: ["./src/worker.ts"],
+  // Remove external to bundle @huggingface/transformers into worker
+  // external: ["@huggingface/transformers"],
+  entryPoints: ["./src/languageModel/worker.ts"],
   define: {
     __IS_WORKER__: "true",
   },
@@ -35,11 +36,11 @@ const polyfillConfig = {
 await build({
   ...polyfillConfig,
   format: "esm",
-  outfile: "dist/prompt-api-polyfill.es.js",
+  outfile: "dist/language-model-polyfill.es.js",
 });
 
 await build({
   ...polyfillConfig,
   format: "cjs",
-  outfile: "dist/prompt-api-polyfill.cjs.js",
+  outfile: "dist/language-model-polyfill.cjs.js",
 });

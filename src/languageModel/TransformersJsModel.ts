@@ -7,12 +7,22 @@ import {
 } from "./worker/types";
 import { ModelIds, MODELS } from "../constants";
 import { Message } from "@huggingface/transformers";
+import rawDefaultWorker from "../../dist/worker.compiled.js?raw";
 
-const worker = new Worker(new URL("./worker.ts", import.meta.url), {
+const blob = new Blob([rawDefaultWorker], {
+  type: "application/javascript",
+});
+const worker = new Worker(URL.createObjectURL(blob), {
   type: "module",
 });
 
-const postMessage = (message: WorkerRequest) => worker.postMessage(message);
+const postMessage = (message: WorkerRequest) => {
+  try {
+    worker.postMessage(message);
+  } catch (e) {
+    console.error(e);
+  }
+};
 
 let workerRequestId = 0;
 
