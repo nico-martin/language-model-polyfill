@@ -9,8 +9,8 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   };
   private _inputUsage = 0;
   private _inputQuota = 1000;
-  private _topK = 40;
-  private _temperature = 0.7;
+  private _topK = LanguageModel.defaultParams.defaultTopK;
+  private _temperature = LanguageModel.defaultParams.defaultTemperature;
   private _destroyed = false;
   private model: TransformersJsModel;
   private _conversationHistory: Array<
@@ -93,33 +93,64 @@ class LanguageModel extends EventTarget implements DestroyableModel {
 
     const response = await this.model.prompt(
       this._conversationHistory,
-      options,
+      this._temperature,
+      this._topK,
+      false,
     );
 
-    this._conversationHistory.push({
-      role: "assistant",
-      content: response,
-    });
+    this._conversationHistory = response.messages as LanguageModelMessage[];
 
-    return response;
+    return response.response;
   }
 
   promptStreaming(
     input: LanguageModelPrompt,
     options?: LanguageModelPromptOptions,
-  ): ReadableStream<string> {
+  ): ReadableStream<string> & AsyncIterable<string> {
     this.ensureNotDestroyed();
 
-    return new ReadableStream({
-      start: (controller) => {
-        // Your streaming implementation
-        const chunks = ["Hello", " ", "world", "!"];
-        chunks.forEach((chunk) => {
-          controller.enqueue(chunk);
-        });
-        controller.close();
+    const messages = this.processPromptInput(input);
+    this._conversationHistory.push(...messages);
+
+    const stream = new ReadableStream<string>({
+      start: async (controller) => {
+        try {
+          const response = await this.model.prompt(
+            this._conversationHistory,
+            this._temperature,
+            this._topK,
+            false,
+            (token_generated: string) => {
+              controller.enqueue(token_generated);
+            },
+          );
+
+          this._conversationHistory =
+            response.messages as LanguageModelMessage[];
+
+          controller.close();
+        } catch (error) {
+          controller.error(error);
+        }
       },
     });
+
+    const asyncIterable = {
+      [Symbol.asyncIterator]: async function* () {
+        const reader = stream.getReader();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            yield value;
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      },
+    };
+
+    return Object.assign(stream, asyncIterable);
   }
 
   async append(
@@ -130,17 +161,6 @@ class LanguageModel extends EventTarget implements DestroyableModel {
 
     // Your append implementation
     return undefined;
-  }
-
-  async measureInputUsage(
-    input: LanguageModelPrompt,
-    options?: LanguageModelPromptOptions,
-  ): Promise<number> {
-    // Calculate token usage - simplified example
-    if (typeof input === "string") {
-      return input.split(" ").length; // Rough word count
-    }
-    return 0;
   }
 
   async clone(options?: LanguageModelCloneOptions): Promise<LanguageModel> {
@@ -182,27 +202,6 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     this.model = null;
     return undefined;
   }
-
-  /*private combineWithInitialPrompts(
-    messages: LanguageModelMessage[],
-  ): LanguageModelMessage[] {
-    if (!this._initialPrompts) {
-      return messages;
-    }
-
-    // Convert initial prompts to regular messages for the model
-    const convertedInitialPrompts = this._initialPrompts.map((msg) => {
-      if ("role" in msg && msg.role === "system") {
-        return {
-          role: "user" as const,
-          content: `System: ${typeof msg.content === "string" ? msg.content : "[complex content]"}`,
-        };
-      }
-      return msg as LanguageModelMessage;
-    });
-
-    return [...convertedInitialPrompts, ...messages];
-  }*/
 
   private processPromptInput(
     input: LanguageModelPrompt,

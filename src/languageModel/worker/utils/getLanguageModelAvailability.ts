@@ -1,18 +1,20 @@
 /// <reference types="@webgpu/types" />
 import isFileInCache from "./isFileInCache";
-import { MODEL } from "../../../constants";
+import { ModelIds, MODELS } from "../../../constants";
 
-const getLanguageModelAvailability = async (): Promise<Availability> => {
+const getLanguageModelAvailability = async (
+  model_id: ModelIds,
+): Promise<Availability> => {
   const adapter = await navigator.gpu.requestAdapter();
-  if (!adapter) {
+  if (!adapter || !(model_id in MODELS)) {
     return "unavailable";
   }
 
   const filesInCache = await Promise.all(
-    Object.keys(MODEL.expectedFiles).map((file) =>
+    Object.keys(MODELS[model_id].expectedFiles).map((file) =>
       isFileInCache(
         "transformers-cache",
-        `https://huggingface.co/${MODEL.id}/resolve/main/${file}`,
+        `https://huggingface.co/${MODELS[model_id].id}/resolve/main/${file}`,
       ),
     ),
   );

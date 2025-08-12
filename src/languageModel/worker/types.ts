@@ -1,8 +1,10 @@
-import { ProgressInfo } from "@huggingface/transformers";
+import { Message, ProgressInfo } from "@huggingface/transformers";
+import { ModelIds } from "../../constants";
 
 interface BaseRequest {
   id: string;
   type: RequestType;
+  model_id: ModelIds;
 }
 
 interface BaseResponse {
@@ -39,7 +41,10 @@ interface LoadModelRequest extends BaseRequest {
 
 interface PromptRequest extends BaseRequest {
   type: RequestType.PROMPT;
-  prompt: string;
+  messages: Array<Message>;
+  temperature: number;
+  top_k: number;
+  is_init_cache: boolean;
 }
 
 /**
@@ -62,12 +67,14 @@ interface ModelLoadedResponse extends BaseResponse {
 
 interface PromptProgressResponse extends BaseResponse {
   type: ResponseType.PROMPT_PROGRESS;
-  partial_response: string;
+  token_generated: string;
 }
 
 interface PromptDoneResponse extends BaseResponse {
   type: ResponseType.PROMPT_DONE;
   response: string;
+  messages: Array<Message>;
+  usage: ModelUsage;
 }
 
 export interface ErrorResponse extends BaseResponse {
@@ -91,3 +98,12 @@ export type WorkerResponse =
   | ModelLoadingProgressResponse
   | PromptProgressResponse
   | PromptDoneResponse;
+
+export interface ModelUsage {
+  input_tokens: number;
+  input_duration_ms: number;
+  input_cache_used: boolean;
+  output_tokens: number;
+  output_duration_ms: number;
+  output_tps: number;
+}

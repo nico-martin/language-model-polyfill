@@ -4,7 +4,8 @@ import {
   WorkerRequest,
   WorkerResponse,
 } from "./worker/types";
-import { MODEL } from "../constants";
+import { ModelIds, MODELS } from "../constants";
+import { Message } from "@huggingface/transformers";
 
 const worker = new Worker(new URL("./worker.ts", import.meta.url), {
   type: "module",
@@ -15,6 +16,12 @@ const postMessage = (message: WorkerRequest) => worker.postMessage(message);
 let workerRequestId = 0;
 
 class TransformersJsModel {
+  private model_id: ModelIds;
+
+  public constructor(model_id: ModelIds = "Qwen3-4B") {
+    this.model_id = model_id;
+  }
+
   public async loadModel(
     monitor?: CreateMonitor,
     signal?: AbortSignal,
@@ -51,7 +58,7 @@ class TransformersJsModel {
           loaded: number;
           total: number;
         }
-      > = Object.entries(MODEL.expectedFiles).reduce(
+      > = Object.entries(MODELS[this.model_id].expectedFiles).reduce(
         (acc, [file, total]) => ({
           ...acc,
           [file]: {
@@ -115,28 +122,36 @@ class TransformersJsModel {
       postMessage({
         id: requestId,
         type: RequestType.LOAD_MODEL,
+        model_id: this.model_id,
       });
     });
   }
 
   async prompt(
     input: Array<LanguageModelMessage | LanguageModelSystemMessage>,
+    temperature: number,
+    top_k: number,
+    is_init_cache: boolean,
+    onResponseUpdate: (token_generated: string) => void = () => {},
     options?: LanguageModelPromptOptions,
-  ): Promise<string> {
-    console.log("PROMPT", input);
+  ): Promise<{ response: string; messages: Array<Message> }> {
     return new Promise((resolve, reject) => {
-      resolve("test");
-      /*const requestId = (workerRequestId++).toString();
+      const requestId = (workerRequestId++).toString();
       const listener = (e: MessageEvent<WorkerResponse>) => {
         if (e.data.id !== requestId) return;
-        worker.removeEventListener("message", listener);
 
         if (e.data.type === ResponseType.ERROR) {
+          worker.removeEventListener("message", listener);
           reject(e.data.error);
         }
 
-        if (e.data.type === ResponseType.PROMPT_RESPONSE) {
-          resolve(e.data.response);
+        if (e.data.type === ResponseType.PROMPT_PROGRESS) {
+          onResponseUpdate(e.data.token_generated);
+        }
+
+        if (e.data.type === ResponseType.PROMPT_DONE) {
+          worker.removeEventListener("message", listener);
+          resolve({ response: e.data.response, messages: e.data.messages });
         }
       };
 
@@ -145,9 +160,15 @@ class TransformersJsModel {
       postMessage({
         id: requestId,
         type: RequestType.PROMPT,
-        input,
-        options,
-      });*/
+        messages: input.map((message) => ({
+          role: message.role,
+          content: message.content.toString(),
+        })),
+        temperature,
+        top_k,
+        is_init_cache,
+        model_id: this.model_id,
+      });
     });
   }
 
@@ -174,6 +195,7 @@ class TransformersJsModel {
       postMessage({
         id: requestId,
         type: RequestType.CHECK_AVAILABILITY,
+        model_id: "Qwen3-4B",
       });
     });
   }

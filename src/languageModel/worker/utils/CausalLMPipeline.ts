@@ -5,24 +5,45 @@ import {
   PreTrainedTokenizer,
   ProgressCallback,
 } from "@huggingface/transformers";
-import { MODEL } from "../../../constants";
+import { ModelIds, MODELS } from "../../../constants";
 
 class CausalLMPipeline {
-  static tokenizer: Promise<PreTrainedTokenizer>;
-  static model: Promise<PreTrainedModel>;
+  static tokenizer: Partial<Record<ModelIds, PreTrainedTokenizer>> = {};
+  static model: Partial<Record<ModelIds, PreTrainedModel>> = {};
 
-  static async getInstance(progress_callback: ProgressCallback = null) {
-    this.tokenizer ??= AutoTokenizer.from_pretrained(MODEL.id, {
-      progress_callback,
-    });
+  static async getInstance(
+    model_id: ModelIds,
+    progress_callback: ProgressCallback = null,
+  ): Promise<[PreTrainedTokenizer, PreTrainedModel]> {
+    if (!(model_id in MODELS)) {
+      throw new Error(
+        `Model ${model_id} not found. Available models: ${Object.keys(MODELS).join(", ")}`,
+      );
+    }
+    const MODEL = MODELS[model_id];
 
-    this.model ??= AutoModelForCausalLM.from_pretrained(MODEL.id, {
-      dtype: MODEL.dtype,
-      device: "webgpu",
-      progress_callback,
-    });
+    if (
+      !this.tokenizer ||
+      !this.tokenizer[model_id] ||
+      !this.model ||
+      !this.model[model_id]
+    ) {
+      const tokenizer = AutoTokenizer.from_pretrained(MODEL.id, {
+        progress_callback,
+      });
 
-    return Promise.all([this.tokenizer, this.model]);
+      const model = AutoModelForCausalLM.from_pretrained(MODEL.id, {
+        dtype: MODEL.dtype,
+        device: "webgpu",
+        progress_callback,
+      });
+
+      const loaded = await Promise.all([tokenizer, model]);
+
+      this.tokenizer[model_id] = loaded[0];
+      this.model[model_id] = loaded[1];
+    }
+    return [this.tokenizer[model_id], this.model[model_id]];
   }
 }
 

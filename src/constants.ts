@@ -11,9 +11,13 @@ interface ModelDefinition {
     | "bnb4"
     | "q4f16";
   expectedFiles: Record<string, number>;
+  maxToken: number;
+  maxNewTokens: number;
 }
 
-const MODELS: Record<string, ModelDefinition> = {
+export type ModelIds = "Qwen3-4B";
+
+export const MODELS: Record<ModelIds, ModelDefinition> = {
   "Qwen3-4B": {
     id: "onnx-community/Qwen3-4B-ONNX",
     dtype: "q4f16",
@@ -26,16 +30,7 @@ const MODELS: Record<string, ModelDefinition> = {
       "onnx/model_q4f16.onnx_data_1": 677150720,
       "onnx/model_q4f16.onnx_data": 2096005120,
     },
+    maxToken: 10000,
+    maxNewTokens: 1500,
   },
 };
-
-export const MODEL = Object.values(MODELS)[0];
-/*export const MODEL =
-  window?.LanguageModelModel in MODELS
-    ? MODELS[window.LanguageModelModel]
-    : Object.values(MODELS)[0];*/
-
-export const MODEL_SIZE = Object.values(MODEL.expectedFiles).reduce(
-  (acc, total) => acc + total,
-  0,
-);
