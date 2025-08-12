@@ -15,8 +15,7 @@ await build({
   outfile: "dist/worker.compiled.js",
   platform: "browser",
   format: "esm",
-  // Remove external to bundle @huggingface/transformers into worker
-  // external: ["@huggingface/transformers"],
+  external: ["@huggingface/transformers"],
   entryPoints: ["./src/languageModel/worker.ts"],
   define: {
     __IS_WORKER__: "true",

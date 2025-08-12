@@ -1,5 +1,4 @@
 import {
-  ErrorResponse,
   RequestType,
   ResponseType,
   WorkerRequest,

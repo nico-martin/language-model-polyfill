@@ -1,30 +1,18 @@
 import KVCache from "./KVCache";
 import {
-  InterruptableStoppingCriteria,
   Message,
   PreTrainedModel,
   PreTrainedTokenizer,
   Tensor,
-  TextStreamer,
 } from "@huggingface/transformers";
 import { ModelUsage } from "../types";
 import { ModelIds, MODELS } from "../../../constants";
 import { WorkerError, WorkerErrorCode } from "./WorkerError";
+import getPipeline from "../../../utils/getPipeline";
 
-const stopping_criteria = new InterruptableStoppingCriteria();
+let stopping_criteria: any = null;
 
-const prompt = async ({
-  tokenizer,
-  model,
-  messages,
-  cache,
-  on_response_update,
-  temperature,
-  top_k,
-  is_init_cache,
-  model_id,
-  abortSignal,
-}: {
+const prompt = async (params: {
   tokenizer: PreTrainedTokenizer;
   model: PreTrainedModel;
   messages: Array<Message>;
@@ -35,7 +23,29 @@ const prompt = async ({
   is_init_cache: boolean;
   model_id: ModelIds;
   abortSignal?: AbortSignal;
-}) => {
+}): Promise<{
+  answer: string;
+  usage: ModelUsage;
+  newMessages: Array<Message>;
+}> => {
+  const {
+    tokenizer,
+    model,
+    messages,
+    cache,
+    on_response_update,
+    temperature,
+    top_k,
+    is_init_cache,
+    model_id,
+    abortSignal,
+  } = params;
+
+  if (!stopping_criteria) {
+    const { InterruptableStoppingCriteria } = await getPipeline();
+    stopping_criteria = new InterruptableStoppingCriteria();
+  }
+
   const input_start_time: DOMHighResTimeStamp = performance.now();
   const inputs = tokenizer.apply_chat_template(messages, {
     add_generation_prompt: true,
@@ -97,6 +107,7 @@ const prompt = async ({
     on_response_update(output);
   };
 
+  const { TextStreamer } = await getPipeline();
   const streamer = new TextStreamer(tokenizer, {
     skip_prompt: true,
     skip_special_tokens: true,

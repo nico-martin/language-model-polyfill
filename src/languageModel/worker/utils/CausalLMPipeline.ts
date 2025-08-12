@@ -1,11 +1,10 @@
 import {
-  AutoModelForCausalLM,
-  AutoTokenizer,
   PreTrainedModel,
   PreTrainedTokenizer,
   ProgressCallback,
 } from "@huggingface/transformers";
 import { ModelIds, MODELS } from "../../../constants";
+import getPipeline from "../../../utils/getPipeline";
 
 class CausalLMPipeline {
   static tokenizer: Partial<Record<ModelIds, PreTrainedTokenizer>> = {};
@@ -29,6 +28,8 @@ class CausalLMPipeline {
       !this.model ||
       !this.model[model_id]
     ) {
+      const { AutoTokenizer, AutoModelForCausalLM } = await getPipeline();
+
       const tokenizer = AutoTokenizer.from_pretrained(MODEL.id, {
         progress_callback,
         ...(abortSignal && { signal: abortSignal }),
