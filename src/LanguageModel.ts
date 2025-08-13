@@ -42,6 +42,10 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     return this._latestUsage;
   }
 
+  get fullDownloadSize(): number {
+    return this.model.modelSize;
+  }
+
   private constructor() {
     super();
   }
@@ -226,6 +230,10 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   }
 
   destroy(): undefined {
+    /**
+     * todo: should also delete the KVCache
+     */
+
     this._destroyed = true;
     // Cleanup resources
     this.model = null;

@@ -35,6 +35,13 @@ class TransformersJsModel {
     return MODELS[this.model_id].maxToken;
   }
 
+  public get modelSize(): number {
+    return Object.values(MODELS[this.model_id].expectedFiles).reduce(
+      (acc, val) => acc + val,
+      0,
+    );
+  }
+
   public async loadModel(
     monitor?: CreateMonitor,
     signal?: AbortSignal,
