@@ -27,6 +27,16 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   public onquotaoverflow: ((this: LanguageModel, ev: Event) => any) | null =
     null;
 
+  private static getWorker(): Worker {
+    if (LanguageModel.worker) {
+      return LanguageModel.worker;
+    }
+
+    return new Worker(new URL("./worker.compiled.js", import.meta.url), {
+      type: "module",
+    });
+  }
+
   get inputUsage(): number {
     return this._inputUsage;
   }
@@ -57,7 +67,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     const instance = new LanguageModel();
     instance.session_id = Math.random().toString(36).substring(2, 15);
     instance.model = new TransformersJsModel(
-      this.worker,
+      LanguageModel.getWorker(),
       instance.session_id,
       this.model_id,
     );
@@ -208,7 +218,10 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   static async availability(
     options?: LanguageModelCreateCoreOptions,
   ): Promise<Availability> {
-    const instance = new TransformersJsModel(this.worker, this.model_id);
+    const instance = new TransformersJsModel(
+      LanguageModel.getWorker(),
+      this.model_id,
+    );
     return instance.availability();
   }
 

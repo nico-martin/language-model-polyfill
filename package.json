@@ -1,6 +1,6 @@
 {
   "name": "language-model-polyfill",
-  "version": "0.0.16",
+  "version": "0.0.19",
   "description": "A Polyfill for the Prompt API (window.LanguageModel) based on Transformers.js",
   "main": "dist/language-model-polyfill.cjs.js",
   "module": "dist/language-model-polyfill.es.js",
@@ -10,7 +10,8 @@
       "types": "./dist/index.d.ts",
       "require": "./dist/language-model-polyfill.cjs.js",
       "import": "./dist/language-model-polyfill.es.js"
-    }
+    },
+    "./worker": "./dist/worker.compiled.js"
   },
   "files": [
     "dist",
@@ -42,5 +43,7 @@
   "bugs": {
     "url": "https://github.com/nico-martin/language-model-polyfill/issues"
   },
-  "homepage": "https://github.com/nico-martin/language-model-polyfill#readme"
+  "homepage": "https://github.com/nico-martin/language-model-polyfill#readme",
+  "jsdelivr": "./dist/language-model-polyfill.es.js",
+  "unpkg": "./dist/language-model-polyfill.es.js"
 }
