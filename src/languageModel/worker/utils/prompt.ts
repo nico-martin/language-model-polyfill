@@ -78,13 +78,13 @@ const prompt = async (params: {
     }) as Array<number>
   ).length;
 
-  if (new_messages_size >= MODELS[model_id].maxNewTokens) {
+  /*if (new_messages_size >= MODELS[model_id].maxNewTokens) {
     throw new WorkerError(
       WorkerErrorCode.MAX_NEW_TOKENS_EXCEEDED,
       `Input size of new tokens ${new_messages_size} exceeds maximum allowed tokens per prompt ${MODELS[model_id].maxNewTokens}`,
       { new_messages_size, max_new_tokens: MODELS[model_id].maxNewTokens },
     );
-  }
+  }*/
 
   let first_token_time: DOMHighResTimeStamp = null;
   let num_tokens = 0;
@@ -145,6 +145,7 @@ const prompt = async (params: {
   cache.set(newMessages, past_key_values);
 
   const usage: ModelUsage = {
+    new_input_tokens: new_messages_size,
     input_tokens: input_size,
     input_duration_ms: first_token_time - input_start_time,
     input_cache_used: Boolean(kv_cache),

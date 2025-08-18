@@ -150,6 +150,9 @@ const webWorkerHandler = () => {
             postMessage(cancelError.toErrorResponse(request.id));
             return;
           }
+          case RequestType.DESTROY:
+            cache.deleteSession(request.session_id);
+            return;
           default:
             const noHandlerError = new WorkerError(
               WorkerErrorCode.NO_HANDLER,

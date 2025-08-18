@@ -1,7 +1,10 @@
 import { Message, Tensor } from "@huggingface/transformers";
 
 class KVCache {
-  private cache: Map<string, Record<string, Tensor>>;
+  private cache: Map<
+    string,
+    { session_id: string; kv: Record<string, Tensor> }
+  >;
 
   public constructor() {
     this.cache = new Map();
@@ -58,16 +61,28 @@ class KVCache {
     const removedMessages = currentMessages.slice(-1);
 
     const hash = this.generateHash(messagesForCache);
+    const cache = this.cache.get(hash);
 
     return {
-      value: this.cache.get(hash),
+      value: cache?.kv || null,
       new_messages: removedMessages,
     };
   }
 
-  public set(messages: Array<Message>, kv: Record<string, Tensor>) {
+  public set(
+    messages: Array<Message>,
+    data: { kv: Record<string, Tensor>; session_id: string },
+  ) {
     const hash = this.generateHash(messages);
-    this.cache.set(hash, kv);
+    this.cache.set(hash, data);
+  }
+
+  public deleteSession(session_id: string) {
+    this.cache.forEach((value, key) => {
+      if (value.session_id === session_id) {
+        this.cache.delete(key);
+      }
+    });
   }
 }
 

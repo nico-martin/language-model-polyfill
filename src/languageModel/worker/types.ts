@@ -5,6 +5,7 @@ interface BaseRequest {
   id: string;
   type: RequestType;
   model_id: ModelIds;
+  session_id: string;
 }
 
 interface BaseResponse {
@@ -17,6 +18,7 @@ export enum RequestType {
   LOAD_MODEL,
   PROMPT,
   CANCEL,
+  DESTROY,
 }
 
 export enum ResponseType {
@@ -51,6 +53,10 @@ interface PromptRequest extends BaseRequest {
 
 interface CancelRequest extends BaseRequest {
   type: RequestType.CANCEL;
+}
+
+interface DestroyRequest extends BaseRequest {
+  type: RequestType.DESTROY;
 }
 
 /**
@@ -101,7 +107,8 @@ export type WorkerRequest =
   | CheckAvailabilityRequest
   | LoadModelRequest
   | PromptRequest
-  | CancelRequest;
+  | CancelRequest
+  | DestroyRequest;
 
 export type WorkerResponse =
   | AvailabilityResponse
@@ -113,6 +120,7 @@ export type WorkerResponse =
   | PromptCancelledResponse;
 
 export interface ModelUsage {
+  new_input_tokens: number;
   input_tokens: number;
   input_duration_ms: number;
   input_cache_used: boolean;

@@ -2,6 +2,8 @@ import TransformersJsModel from "./languageModel/TransformersJsModel";
 import { ModelUsage } from "./languageModel/worker/types";
 import { ModelIds } from "./constants";
 
+const default_model_id = "SmolLM3-3B";
+
 class LanguageModel extends EventTarget implements DestroyableModel {
   private static defaultParams: LanguageModelParams = {
     defaultTopK: 3,
@@ -9,7 +11,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     defaultTemperature: 1,
     maxTemperature: 2,
   };
-  public static model_id: ModelIds = "SmolLM3-3B";
+  public static model_id: ModelIds = default_model_id;
   public static worker: Worker;
   private _inputUsage = 0;
   private _inputQuota = 0;
@@ -21,7 +23,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     LanguageModelMessage | LanguageModelSystemMessage
   > = [];
   private _latestUsage: ModelUsage = null;
-
+  private session_id: string = null;
   public onquotaoverflow: ((this: LanguageModel, ev: Event) => any) | null =
     null;
 
@@ -42,10 +44,6 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     return this._latestUsage;
   }
 
-  get fullDownloadSize(): number {
-    return this.model.modelSize;
-  }
-
   private constructor() {
     super();
   }
@@ -57,7 +55,12 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     >,
   ): Promise<LanguageModel> {
     const instance = new LanguageModel();
-    instance.model = new TransformersJsModel(this.worker, this.model_id);
+    instance.session_id = Math.random().toString(36).substring(2, 15);
+    instance.model = new TransformersJsModel(
+      this.worker,
+      instance.session_id,
+      this.model_id,
+    );
     instance._inputQuota = instance.model.maxToken;
 
     // @ts-expect-error
@@ -230,12 +233,9 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   }
 
   destroy(): undefined {
-    /**
-     * todo: should also delete the KVCache
-     */
-
     this._destroyed = true;
     // Cleanup resources
+    this.model.destroy();
     this.model = null;
     return undefined;
   }
@@ -253,6 +253,10 @@ class LanguageModel extends EventTarget implements DestroyableModel {
       ];
     }
     return input;
+  }
+
+  static downloadSize(model_id: ModelIds = default_model_id): number {
+    return TransformersJsModel.downloadSize(model_id);
   }
 }
 

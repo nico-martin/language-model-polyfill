@@ -13,14 +13,20 @@ let workerRequestId = 0;
 class TransformersJsModel {
   private model_id: ModelIds;
   private worker: Worker;
+  private session_id: string;
 
-  public constructor(worker: Worker, model_id: ModelIds = "SmolLM3-3B") {
+  public constructor(
+    worker: Worker,
+    session_id: string,
+    model_id: ModelIds = "SmolLM3-3B",
+  ) {
     this.model_id = model_id;
     if (worker) {
       this.worker = worker;
     } else {
       throw new Error("No worker provided");
     }
+    this.session_id = session_id;
   }
 
   private postMessage = (message: WorkerRequest) => {
@@ -106,6 +112,7 @@ class TransformersJsModel {
 
         if (e.data.type === ResponseType.MODEL_LOADED) {
           this.worker.removeEventListener("message", listener);
+          //console.log(JSON.stringify(filesMap));
           resolve();
         }
 
@@ -148,15 +155,19 @@ class TransformersJsModel {
         id: requestId,
         type: RequestType.LOAD_MODEL,
         model_id: this.model_id,
+        session_id: this.session_id,
       });
 
-      signal.onabort = () => {
-        this.postMessage({
-          id: requestId,
-          type: RequestType.CANCEL,
-          model_id: this.model_id,
-        });
-      };
+      if (signal) {
+        signal.onabort = () => {
+          this.postMessage({
+            id: requestId,
+            type: RequestType.CANCEL,
+            model_id: this.model_id,
+            session_id: this.session_id,
+          });
+        };
+      }
     });
   }
 
@@ -214,6 +225,7 @@ class TransformersJsModel {
         top_k,
         is_init_cache,
         model_id: this.model_id,
+        session_id: this.session_id,
       });
 
       if (options?.signal) {
@@ -222,9 +234,20 @@ class TransformersJsModel {
             id: requestId,
             type: RequestType.CANCEL,
             model_id: this.model_id,
+            session_id: this.session_id,
           });
         };
       }
+    });
+  }
+
+  async destroy() {
+    const requestId = (workerRequestId++).toString();
+    this.postMessage({
+      id: requestId,
+      type: RequestType.DESTROY,
+      model_id: this.model_id,
+      session_id: this.session_id,
     });
   }
 
@@ -252,9 +275,17 @@ class TransformersJsModel {
         id: requestId,
         type: RequestType.CHECK_AVAILABILITY,
         model_id: "Qwen3-4B",
+        session_id: this.session_id,
       });
     });
   }
+
+  static downloadSize = (model_id: ModelIds) => {
+    return Object.values(MODELS[model_id].expectedFiles).reduce(
+      (acc, val) => acc + val,
+      0,
+    );
+  };
 }
 
 export default TransformersJsModel;

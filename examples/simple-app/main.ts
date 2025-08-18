@@ -9,8 +9,10 @@ const worker = new Worker(new URL("./worker.ts", import.meta.url), {
 
 let abortController = new AbortController();
 
-//TFLanguageModel.model_id = "Qwen3-4B";
+TFLanguageModel.model_id = "Qwen3-4B";
 TFLanguageModel.worker = worker;
+
+console.log(TFLanguageModel.downloadSize());
 
 buttonAbort.addEventListener("click", () => {
   abortController.abort();
@@ -49,7 +51,7 @@ if (button) {
         );
       });
 
-      const stream = session.promptStreaming("Write me an short poem!", {
+      const stream = session.promptStreaming("Tell me something about you", {
         signal: abortController.signal,
       });
       const reader = stream.getReader();

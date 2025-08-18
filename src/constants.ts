@@ -15,7 +15,7 @@ interface ModelDefinition {
   maxNewTokens: number; // todo: I think this does not depend on the model but on the device.
 }
 
-export type ModelIds = "Qwen3-4B" | "SmolLM3-3B";
+export type ModelIds = "Qwen3-4B" | "SmolLM3-3B" /*| "Gemma3-270m"*/;
 
 export const MODELS: Record<ModelIds, ModelDefinition> = {
   "SmolLM3-3B": {
@@ -47,4 +47,32 @@ export const MODELS: Record<ModelIds, ModelDefinition> = {
     maxToken: 10000,
     maxNewTokens: 1500,
   },
+  /*"Gemma3-270m": {
+    id: "onnx-community/gemma-3-270m-it-ONNX",
+    dtype: "fp32",
+    expectedFiles: {
+      "config.json": 1612,
+      "tokenizer_config.json": 1158469,
+      "tokenizer.json": 20323106,
+      "generation_config.json": 172,
+      "onnx/model.onnx": 201742,
+      "onnx/model.onnx_data": 1139501568,
+    },
+    maxToken: 10000,
+    maxNewTokens: 1500,
+  },
+  "Gemma3-270m-q4f16": {
+    id: "onnx-community/gemma-3-270m-it-ONNX",
+    dtype: "q4f16",
+    expectedFiles: {
+      "config.json": 1612,
+      "tokenizer_config.json": 1158469,
+      "tokenizer.json": 20323106,
+      "generation_config.json": 172,
+      "onnx/model_q4f16.onnx": 330642,
+      "onnx/model_q4f16.onnx_data": 425724416,
+    },
+    maxToken: 10000,
+    maxNewTokens: 1500,
+  },*/
 };
