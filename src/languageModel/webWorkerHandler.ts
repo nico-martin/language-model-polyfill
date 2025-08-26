@@ -99,6 +99,7 @@ const webWorkerHandler = () => {
               top_k: request.top_k,
               is_init_cache: request.is_init_cache,
               model_id: request.model_id,
+              session_id: request.session_id,
               abortSignal: abortController.signal,
             });
 

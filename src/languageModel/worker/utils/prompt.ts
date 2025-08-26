@@ -23,6 +23,7 @@ const prompt = async (params: {
   top_k: number;
   is_init_cache: boolean;
   model_id: ModelIds;
+  session_id: string;
   abortSignal?: AbortSignal;
 }): Promise<{
   answer: string;
@@ -39,6 +40,7 @@ const prompt = async (params: {
     top_k,
     is_init_cache,
     model_id,
+    session_id,
     abortSignal,
   } = params;
 
@@ -142,7 +144,7 @@ const prompt = async (params: {
 
   const done_time: DOMHighResTimeStamp = performance.now();
 
-  cache.set(newMessages, past_key_values);
+  cache.set(newMessages, { session_id, kv: past_key_values });
 
   const usage: ModelUsage = {
     new_input_tokens: new_messages_size,
