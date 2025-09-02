@@ -62,7 +62,7 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     options?: Omit<
       LanguageModelCreateOptions,
       "tools" | "expectedInputs" | "expectedOutputs"
-    >,
+    > & { buildKVCache?: boolean },
   ): Promise<LanguageModel> {
     const instance = new LanguageModel();
     instance.session_id = Math.random().toString(36).substring(2, 15);
@@ -99,19 +99,21 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     }
 
     // build the KVCache
-    const response = await instance.model.prompt(
-      instance._conversationHistory,
-      instance._temperature,
-      instance._topK,
-      true,
-      () => {},
-      {
-        signal: options?.signal,
-      },
-    );
-    instance.updateUsage(response.usage);
-    instance._conversationHistory = response.messages as LanguageModelMessage[];
-
+    if (options?.buildKVCache !== false) {
+      const response = await instance.model.prompt(
+        instance._conversationHistory,
+        instance._temperature,
+        instance._topK,
+        true,
+        () => {},
+        {
+          signal: options?.signal,
+        },
+      );
+      instance.updateUsage(response.usage);
+      instance._conversationHistory =
+        response.messages as LanguageModelMessage[];
+    }
     return instance;
   }
 
