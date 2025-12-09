@@ -15,10 +15,8 @@ interface ModelDefinition {
   maxNewTokens: number; // todo: I think this does not depend on the model but on the device.
 }
 
-export type ModelIds = "Qwen3-4B" | "SmolLM3-3B" /*| "Gemma3-270m"*/;
-
-export const MODELS: Record<ModelIds, ModelDefinition> = {
-  "SmolLM3-3B": {
+const MODELS: Array<ModelDefinition> = [
+  {
     id: "HuggingFaceTB/SmolLM3-3B-ONNX",
     dtype: "q4f16",
     expectedFiles: {
@@ -32,7 +30,7 @@ export const MODELS: Record<ModelIds, ModelDefinition> = {
     maxToken: 10000,
     maxNewTokens: 1500,
   },
-  "Qwen3-4B": {
+  {
     id: "onnx-community/Qwen3-4B-ONNX",
     dtype: "q4f16",
     expectedFiles: {
@@ -75,4 +73,8 @@ export const MODELS: Record<ModelIds, ModelDefinition> = {
     maxToken: 10000,
     maxNewTokens: 1500,
   },*/
-};
+];
+
+export const MODEL = MODELS.find(
+  (m) => m.id === "onnx-community/Qwen3-4B-ONNX",
+);

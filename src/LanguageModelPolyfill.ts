@@ -1,41 +1,24 @@
-import TransformersJsModel from "./languageModel/TransformersJsModel";
-import { ModelUsage } from "./languageModel/worker/types";
-import { ModelIds } from "./constants";
+import TextGeneration from "./textGeneration/TextGeneration";
 
-const default_model_id = "SmolLM3-3B";
-
-class LanguageModel extends EventTarget implements DestroyableModel {
+class LanguageModelPolyfill extends EventTarget implements LanguageModel {
   private static defaultParams: LanguageModelParams = {
     defaultTopK: 3,
     maxTopK: 8,
     defaultTemperature: 1,
     maxTemperature: 2,
   };
-  public static model_id: ModelIds = default_model_id;
-  public static worker: Worker;
   private _inputUsage = 0;
   private _inputQuota = 0;
-  private _topK = LanguageModel.defaultParams.defaultTopK;
-  private _temperature = LanguageModel.defaultParams.defaultTemperature;
+  private _topK = LanguageModelPolyfill.defaultParams.defaultTopK;
+  private _temperature = LanguageModelPolyfill.defaultParams.defaultTemperature;
   private _destroyed = false;
-  private model: TransformersJsModel;
-  private _conversationHistory: Array<
+  private model: TextGeneration = null;
+  public _conversationHistory: Array<
     LanguageModelMessage | LanguageModelSystemMessage
   > = [];
-  private _latestUsage: ModelUsage = null;
-  private session_id: string = null;
+
   public onquotaoverflow: ((this: LanguageModel, ev: Event) => any) | null =
     null;
-
-  private static getWorker(): Worker {
-    if (LanguageModel.worker) {
-      return LanguageModel.worker;
-    }
-
-    return new Worker(new URL("./worker.compiled.js", import.meta.url), {
-      type: "module",
-    });
-  }
 
   get inputUsage(): number {
     return this._inputUsage;
@@ -50,10 +33,6 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     return this._temperature;
   }
 
-  get latestUsage(): ModelUsage {
-    return this._latestUsage;
-  }
-
   private constructor() {
     super();
   }
@@ -62,16 +41,10 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     options?: Omit<
       LanguageModelCreateOptions,
       "tools" | "expectedInputs" | "expectedOutputs"
-    > & { buildKVCache?: boolean },
+    >,
   ): Promise<LanguageModel> {
-    const instance = new LanguageModel();
-    instance.session_id = Math.random().toString(36).substring(2, 15);
-    instance.model = new TransformersJsModel(
-      LanguageModel.getWorker(),
-      instance.session_id,
-      this.model_id,
-    );
-    instance._inputQuota = instance.model.maxToken;
+    const instance = new LanguageModelPolyfill();
+    instance.model = new TextGeneration();
 
     // @ts-expect-error
     if (options?.tools || options?.expectedInputs || options?.expectedOutputs) {
@@ -90,31 +63,35 @@ class LanguageModel extends EventTarget implements DestroyableModel {
       instance._conversationHistory = options.initialPrompts;
     }
 
-    if (options?.monitor) {
-      const monitor = instance.createProgressMonitor();
-      options.monitor(monitor);
-      await instance.model.loadModel(monitor, options?.signal);
-    } else {
-      await instance.model.loadModel(undefined, options?.signal);
-    }
+    const isDownloaded =
+      (await LanguageModelPolyfill.availability()) === "available";
+    const monitor = instance.createProgressMonitor();
+    options?.monitor?.(monitor);
+    await instance.model.loadModel(({ percentage, total }) => {
+      if (options?.monitor && !isDownloaded) {
+        const event = new ProgressEvent("downloadprogress", {
+          lengthComputable: true,
+          loaded: percentage,
+          total: total,
+        });
 
-    // build the KVCache
-    if (options?.buildKVCache !== false) {
-      const response = await instance.model.prompt(
-        instance._conversationHistory,
-        instance._temperature,
-        instance._topK,
-        true,
-        () => {},
-        {
-          signal: options?.signal,
-        },
-      );
-      instance.updateUsage(response.usage);
-      instance._conversationHistory =
-        response.messages as LanguageModelMessage[];
-    }
+        if (monitor.ondownloadprogress) {
+          monitor.ondownloadprogress.call(monitor, event);
+        }
+        monitor.dispatchEvent(event);
+      }
+    });
+
     return instance;
+  }
+
+  async measureInputUsage(
+    input: LanguageModelPrompt,
+    options?: LanguageModelPromptOptions,
+  ): Promise<number> {
+    // TODO
+    console.error("measureInputUsage not yet implemented", input, options);
+    return 0;
   }
 
   private createProgressMonitor(): CreateMonitor {
@@ -136,13 +113,14 @@ class LanguageModel extends EventTarget implements DestroyableModel {
       this._conversationHistory,
       this._temperature,
       this._topK,
-      false,
+      options.signal,
       () => {},
-      options,
     );
 
-    this.updateUsage(response.usage);
-    this._conversationHistory = response.messages as LanguageModelMessage[];
+    this._conversationHistory.push({
+      role: "assistant",
+      content: response.response,
+    });
 
     return response.response;
   }
@@ -163,16 +141,16 @@ class LanguageModel extends EventTarget implements DestroyableModel {
             this._conversationHistory,
             this._temperature,
             this._topK,
-            false,
-            (token_generated) => {
-              controller.enqueue(token_generated);
+            options.signal,
+            (token) => {
+              controller.enqueue(token);
             },
-            options,
           );
 
-          this.updateUsage(response.usage);
-          this._conversationHistory =
-            response.messages as LanguageModelMessage[];
+          this._conversationHistory.push({
+            role: "assistant",
+            content: response.response,
+          });
 
           controller.close();
         } catch (error) {
@@ -220,25 +198,12 @@ class LanguageModel extends EventTarget implements DestroyableModel {
   static async availability(
     options?: LanguageModelCreateCoreOptions,
   ): Promise<Availability> {
-    const instance = new TransformersJsModel(
-      LanguageModel.getWorker(),
-      this.model_id,
-    );
+    const instance = new TextGeneration();
     return instance.availability();
   }
 
   static async params(): Promise<LanguageModelParams> {
     return new Promise((resolve) => resolve(this.defaultParams));
-  }
-
-  private updateUsage(usage: ModelUsage): void {
-    this._inputUsage = usage.total_tokens;
-    this._latestUsage = usage;
-    if (this._inputUsage > this._inputQuota && this.onquotaoverflow) {
-      const event = new Event("quotaoverflow");
-      this.onquotaoverflow.call(this, event);
-      this.dispatchEvent(event);
-    }
   }
 
   private ensureNotDestroyed(): void {
@@ -269,10 +234,6 @@ class LanguageModel extends EventTarget implements DestroyableModel {
     }
     return input;
   }
-
-  static downloadSize(model_id: ModelIds = default_model_id): number {
-    return TransformersJsModel.downloadSize(model_id);
-  }
 }
 
-export default LanguageModel;
+export default LanguageModelPolyfill;

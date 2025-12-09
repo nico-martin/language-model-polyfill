@@ -1,6 +1,6 @@
 {
   "name": "language-model-polyfill",
-  "version": "0.0.21",
+  "version": "0.0.23",
   "description": "A Polyfill for the Prompt API (window.LanguageModel) based on Transformers.js",
   "main": "dist/language-model-polyfill.cjs.js",
   "module": "dist/language-model-polyfill.es.js",
@@ -23,7 +23,7 @@
     "deploy": "node scripts/updateVersion.mjs patch && npm run build && npm publish"
   },
   "dependencies": {
-    "@huggingface/transformers": "^3.7.1"
+    "@huggingface/transformers": "^3.8.1"
   },
   "devDependencies": {
     "@types/dom-chromium-ai": "^0.0.9",

@@ -1,2 +1,1 @@
-export { default as LanguageModel } from "./LanguageModel";
-export { default as webWorkerHandler } from "./languageModel/webWorkerHandler";
+export { default as LanguageModelPolyfill } from "./LanguageModelPolyfill";

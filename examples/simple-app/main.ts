@@ -1,78 +1,80 @@
-import { LanguageModel as TFLanguageModel } from "../../src";
+import { LanguageModelPolyfill } from "../../src";
 
 const output = document.getElementById("output") as HTMLParagraphElement;
 const buttonAbort = document.getElementById("btnAbort") as HTMLButtonElement;
-const button = document.getElementById("btn") as HTMLButtonElement;
-const worker = new Worker(new URL("./worker.ts", import.meta.url), {
-  type: "module",
-});
+const buttonLoad = document.getElementById("btnLoad") as HTMLButtonElement;
+const buttonGenerate = document.getElementById(
+  "btnGenerate",
+) as HTMLButtonElement;
 
 let abortController = new AbortController();
-
-TFLanguageModel.model_id = "Qwen3-4B";
-TFLanguageModel.worker = worker;
-
-console.log(TFLanguageModel.downloadSize());
 
 buttonAbort.addEventListener("click", () => {
   abortController.abort();
   abortController = new AbortController();
 });
 
-if (button) {
-  button.disabled = true;
+(globalThis as any).LanguageModel = LanguageModelPolyfill;
 
-  const init = async () => {
-    const availability = await TFLanguageModel.availability();
-    console.log(availability);
-    if (availability === "unavailable") {
-      alert("Model not available");
-      return;
-    }
+let session: LanguageModel | null = null;
+buttonLoad.addEventListener("click", async () => {
+  const availability = await LanguageModel.availability();
+  console.log(availability);
+  if (availability === "unavailable") {
+    alert("Model not available");
+    return;
+  }
+  buttonLoad.value = `loading (0%)`;
 
-    const session = await TFLanguageModel.create({
+  session = await LanguageModel.create({
+    signal: abortController.signal,
+
+    initialPrompts: [
+      {
+        role: "system",
+        content: "You are Alfred, a helpful and friendly assistant.",
+      },
+    ],
+    monitor: function (m) {
+      m.addEventListener("downloadprogress", (e) => {
+        buttonLoad.textContent = `loading (${Math.round(e.loaded * 100 * 100) / 100}%)`;
+      });
+    },
+  });
+  buttonLoad.textContent = `loaded`;
+  buttonLoad.disabled = true;
+  buttonGenerate.disabled = false;
+});
+
+buttonGenerate.disabled = true;
+
+buttonGenerate.addEventListener("click", async () => {
+  console.log("Button clicked");
+  if (!session) throw new Error("No session found!");
+
+  session.addEventListener("quotaoverflow", () => {
+    console.log("We've gone past the quota, and some inputs will be dropped!");
+  });
+
+  const stream = session.promptStreaming(
+    "Tell me a short poem in which you are the hero",
+    {
       signal: abortController.signal,
-      temperature: 2,
-      initialPrompts: [
-        {
-          role: "system",
-          content: "You are Alfred, a helpful and friendly assistant.",
-        },
-      ],
-    });
+    },
+  );
+  const reader = stream.getReader();
 
-    button.disabled = false;
-    button.addEventListener("click", async () => {
-      console.log("Button clicked");
+  let reply = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    reply += value;
+    output.textContent = reply;
+  }
+  console.log(`${session.inputUsage}/${session.inputQuota}`);
 
-      session.addEventListener("quotaoverflow", () => {
-        console.log(
-          "We've gone past the quota, and some inputs will be dropped!",
-        );
-      });
-
-      const stream = session.promptStreaming("Tell me something about you", {
-        signal: abortController.signal,
-      });
-      const reader = stream.getReader();
-
-      let reply = "";
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        reply += value;
-        output.textContent = reply;
-      }
-      console.log(`${session.inputUsage}/${session.inputQuota}`);
-      console.log("usage", session.latestUsage);
-
-      const answer = await session.prompt("Who is the hero in this poem", {
-        signal: abortController.signal,
-      });
-      console.log(answer);
-      console.log("usage", session.latestUsage);
-      console.log(`${session.inputUsage}/${session.inputQuota}`);
-    });
-  };
-  init();
-}
+  const answer = await session.prompt("Who is the hero in this poem", {
+    signal: abortController.signal,
+  });
+  console.log(answer);
+});

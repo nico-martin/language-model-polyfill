@@ -1,7 +1,7 @@
-const isFileInCache = async (
+export default async function isFileInCache(
   cacheName: string,
   fileUrl: string,
-): Promise<boolean> => {
+): Promise<boolean> {
   try {
     const cache = await caches.open(cacheName);
     const response = await cache.match(fileUrl);
@@ -10,6 +10,4 @@ const isFileInCache = async (
     console.error("Error checking cache:", error);
     return false;
   }
-};
-
-export default isFileInCache;
+}
