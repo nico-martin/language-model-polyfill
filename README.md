@@ -101,8 +101,9 @@ This polyfill implements the standard Chrome Prompt API. For complete API docume
 
 ## Not Yet Supported
 
-- ❌ `tools`
-- ❌ `expectedInputs` / `expectedOutputs`
+- ❌ [`LanguageModelCreateOptions.tools`](https://github.com/webmachinelearning/prompt-api?tab=readme-ov-file#tool-use)
+- ❌ [`LanguageModelCreateOptions.expectedInputs` / `LanguageModelCreateOptions.expectedOutputs`](https://github.com/webmachinelearning/prompt-api?tab=readme-ov-file#multilingual-content-and-expected-input-languages)
+- ❌ [`LanguageModelPromptOptions.responseConstraint`](https://github.com/webmachinelearning/prompt-api?tab=readme-ov-file#structured-output-with-json-schema-or-regexp-constraints)
 - ❌ [Multimodal Inputs](https://developer.chrome.com/docs/ai/prompt-api#multimodal_capabilities) 
 
 ## Example

@@ -28,11 +28,10 @@ buttonLoad.addEventListener("click", async () => {
 
   session = await LanguageModel.create({
     signal: abortController.signal,
-
     initialPrompts: [
       {
         role: "system",
-        content: "You are Alfred, a helpful and friendly assistant.",
+        content: "You are a mediator in a discussion between two departments.",
       },
     ],
     monitor: function (m) {

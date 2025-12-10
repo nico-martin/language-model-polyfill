@@ -9,7 +9,10 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
   private _temperature = MODEL.params.defaultTemperature;
   private _destroyed = false;
   private model: TextGeneration = null;
-  public _conversationHistory: Array<LanguageModelPolyfillMessage> = [];
+  private inputs:
+    | [LanguageModelSystemMessage, ...LanguageModelMessage[]]
+    | LanguageModelMessage[] = [];
+  public messages: Array<LanguageModelPolyfillMessage> = [];
 
   public onquotaoverflow: ((this: LanguageModel, ev: Event) => any) | null =
     null;
@@ -62,11 +65,10 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
       instance._temperature = options.temperature;
     }
     if (options?.initialPrompts) {
-      instance._conversationHistory = options.initialPrompts.map(
-        (initialPrompt) => {
-          return instance.convertLanguageModelMessage(initialPrompt);
-        },
-      );
+      instance.inputs = options.initialPrompts;
+      instance.messages = options.initialPrompts.map((initialPrompt) => {
+        return instance.convertLanguageModelMessage(initialPrompt);
+      });
     }
 
     if (options?.signal) {
@@ -121,21 +123,23 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
   ): Promise<string> {
     this.ensureNotDestroyed();
 
-    const messages = this.convertLanguageModelMessages(input);
-    this._conversationHistory.push(...messages);
+    await this.append(input);
 
     const response = await this.model.prompt(
-      this._conversationHistory,
+      this.messages,
       this._temperature,
       this._topK,
-      options.signal,
+      options?.signal || new AbortController().signal,
       () => {},
     );
 
-    this._conversationHistory.push({
-      role: "assistant",
-      content: response.response,
-    });
+    await this.append([
+      {
+        role: "assistant",
+        content: response.response,
+      },
+    ]);
+
     this._inputUsage += response.generationMetadata.totalTokens;
 
     return response.response;
@@ -147,26 +151,27 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
   ): ReadableStream<string> & AsyncIterable<string> {
     this.ensureNotDestroyed();
 
-    const messages = this.convertLanguageModelMessages(input);
-    this._conversationHistory.push(...messages);
-
     const stream = new ReadableStream<string>({
       start: async (controller) => {
         try {
+          await this.append(input);
           const response = await this.model.prompt(
-            this._conversationHistory,
+            this.messages,
             this._temperature,
             this._topK,
-            options.signal,
+            options?.signal || new AbortController().signal,
             (token) => {
               controller.enqueue(token);
             },
           );
 
-          this._conversationHistory.push({
-            role: "assistant",
-            content: response.response,
-          });
+          await this.append([
+            {
+              role: "assistant",
+              content: response.response,
+            },
+          ]);
+
           this._inputUsage += response.generationMetadata.totalTokens;
 
           controller.close();
@@ -199,8 +204,7 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
     options?: LanguageModelAppendOptions,
   ): Promise<undefined> {
     this.ensureNotDestroyed();
-    const messages = this.convertLanguageModelMessages(input);
-    this._conversationHistory.push(...messages);
+    this.messages.push(...this.convertLanguageModelMessages(input));
     return undefined;
   }
 
@@ -208,6 +212,7 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
     return LanguageModel.create({
       topK: this._topK,
       temperature: this._temperature,
+      initialPrompts: this.inputs,
       ...options,
     });
   }
@@ -263,22 +268,24 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
     };
   };
 
-  private convertLanguageModelMessages(
+  private convertLanguageModelMessages = (
     messages: LanguageModelPrompt,
-  ): Array<LanguageModelPolyfillMessage> {
-    if (Array.isArray(messages)) {
-      return messages.map((message) =>
-        this.convertLanguageModelMessage(message),
-      );
-    }
+  ): Array<LanguageModelPolyfillMessage> =>
+    this.languageModelPromptToLanguageModelMessages(messages).map((message) =>
+      this.convertLanguageModelMessage(message),
+    );
 
-    return [
-      {
-        role: "user",
-        content: messages,
-      },
-    ];
-  }
+  private languageModelPromptToLanguageModelMessages = (
+    prompt: LanguageModelPrompt,
+  ): Array<LanguageModelMessage> =>
+    typeof prompt === "string"
+      ? [
+          {
+            role: "user",
+            content: prompt,
+          },
+        ]
+      : prompt;
 }
 
 export default LanguageModelPolyfill;
