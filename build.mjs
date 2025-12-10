@@ -10,15 +10,6 @@ const mainConfig = {
   plugins: [esbuildRawPlugin()],
 };
 
-await build({
-  ...mainConfig,
-  outfile: "dist/worker.compiled.js",
-  platform: "browser",
-  format: "esm",
-  //external: ["@huggingface/transformers"],
-  entryPoints: ["./src/languageModel/worker.ts"],
-});
-
 const polyfillConfig = {
   ...mainConfig,
   entryPoints: ["src/index.ts"],

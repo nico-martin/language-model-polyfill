@@ -1,6 +1,6 @@
 {
   "name": "language-model-polyfill",
-  "version": "0.1.1",
+  "version": "0.1.5",
   "description": "A Polyfill for the Prompt API (window.LanguageModel) based on Transformers.js",
   "main": "dist/language-model-polyfill.cjs.js",
   "module": "dist/language-model-polyfill.es.js",
