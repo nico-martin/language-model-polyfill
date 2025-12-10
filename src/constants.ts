@@ -11,8 +11,9 @@ interface ModelDefinition {
     | "bnb4"
     | "q4f16";
   expectedFiles: Record<string, number>;
-  maxToken: number;
+  maxTokens: number;
   maxNewTokens: number; // todo: I think this does not depend on the model but on the device.
+  params: LanguageModelParams;
 }
 
 const MODELS: Array<ModelDefinition> = [
@@ -27,8 +28,14 @@ const MODELS: Array<ModelDefinition> = [
       "generation_config.json": 182,
       "onnx/model_q4f16.onnx_data": 2124320768,
     },
-    maxToken: 10000,
-    maxNewTokens: 1500,
+    maxTokens: 40_000,
+    maxNewTokens: 1_500,
+    params: {
+      defaultTopK: 3,
+      maxTopK: 8,
+      defaultTemperature: 1,
+      maxTemperature: 2,
+    },
   },
   {
     id: "onnx-community/Qwen3-4B-ONNX",
@@ -42,8 +49,14 @@ const MODELS: Array<ModelDefinition> = [
       "onnx/model_q4f16.onnx_data_1": 677150720,
       "onnx/model_q4f16.onnx_data": 2096005120,
     },
-    maxToken: 10000,
-    maxNewTokens: 1500,
+    maxTokens: 40_000,
+    maxNewTokens: 1_500,
+    params: {
+      defaultTopK: 3,
+      maxTopK: 8,
+      defaultTemperature: 1,
+      maxTemperature: 2,
+    },
   },
   /*"Gemma3-270m": {
     id: "onnx-community/gemma-3-270m-it-ONNX",

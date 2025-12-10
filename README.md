@@ -96,13 +96,14 @@ This polyfill implements the standard Chrome Prompt API. For complete API docume
 - ✅ Download progress monitoring
 - ✅ `AbortSignal` support
 - ✅ `temperature` and `topK` configuration
+- ✅ `LanguageModel.append()`
+- ✅ `LanguageModel.measureInputUsage()`
 
 ## Not Yet Supported
 
 - ❌ `tools`
 - ❌ `expectedInputs` / `expectedOutputs`
-- ❌ `measureInputUsage()`
-- ❌ `append()`
+- ❌ [Multimodal Inputs](https://developer.chrome.com/docs/ai/prompt-api#multimodal_capabilities) 
 
 ## Example
 

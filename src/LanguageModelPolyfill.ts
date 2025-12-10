@@ -1,21 +1,15 @@
 import TextGeneration from "./textGeneration/TextGeneration";
+import { MODEL } from "./constants";
+import { LanguageModelPolyfillMessage } from "./types";
 
 class LanguageModelPolyfill extends EventTarget implements LanguageModel {
-  private static defaultParams: LanguageModelParams = {
-    defaultTopK: 3,
-    maxTopK: 8,
-    defaultTemperature: 1,
-    maxTemperature: 2,
-  };
   private _inputUsage = 0;
-  private _inputQuota = 0;
-  private _topK = LanguageModelPolyfill.defaultParams.defaultTopK;
-  private _temperature = LanguageModelPolyfill.defaultParams.defaultTemperature;
+  private _inputQuota = MODEL.maxTokens;
+  private _topK = MODEL.params.defaultTopK;
+  private _temperature = MODEL.params.defaultTemperature;
   private _destroyed = false;
   private model: TextGeneration = null;
-  public _conversationHistory: Array<
-    LanguageModelMessage | LanguageModelSystemMessage
-  > = [];
+  public _conversationHistory: Array<LanguageModelPolyfillMessage> = [];
 
   public onquotaoverflow: ((this: LanguageModel, ev: Event) => any) | null =
     null;
@@ -54,13 +48,34 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
     }
 
     if (options?.topK !== undefined) {
+      if (options.topK > MODEL.params.maxTopK) {
+        throw new Error(`topK must be <= ${MODEL.params.maxTopK}`);
+      }
       instance._topK = options.topK;
     }
     if (options?.temperature !== undefined) {
+      if (options.temperature > MODEL.params.maxTemperature) {
+        throw new Error(
+          `temperature must be <= ${MODEL.params.maxTemperature}`,
+        );
+      }
       instance._temperature = options.temperature;
     }
     if (options?.initialPrompts) {
-      instance._conversationHistory = options.initialPrompts;
+      instance._conversationHistory = options.initialPrompts.map(
+        (initialPrompt) => {
+          return instance.convertLanguageModelMessage(initialPrompt);
+        },
+      );
+    }
+
+    if (options?.signal) {
+      options.signal.addEventListener("abort", () => {
+        // todo: Implement abort signal handling when supported by Transformers.js (https://github.com/huggingface/transformers.js/issues/1182)
+        throw new Error(
+          "Unfortunately, LanguageModel initialization cannot be aborted in this polyfill. We're working on a solution.",
+        );
+      });
     }
 
     const isDownloaded =
@@ -89,9 +104,9 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
     input: LanguageModelPrompt,
     options?: LanguageModelPromptOptions,
   ): Promise<number> {
-    // TODO
-    console.error("measureInputUsage not yet implemented", input, options);
-    return 0;
+    return await this.model.countTokens(
+      this.convertLanguageModelMessages(input),
+    );
   }
 
   private createProgressMonitor(): CreateMonitor {
@@ -106,7 +121,7 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
   ): Promise<string> {
     this.ensureNotDestroyed();
 
-    const messages = this.processPromptInput(input);
+    const messages = this.convertLanguageModelMessages(input);
     this._conversationHistory.push(...messages);
 
     const response = await this.model.prompt(
@@ -121,6 +136,7 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
       role: "assistant",
       content: response.response,
     });
+    this._inputUsage += response.generationMetadata.totalTokens;
 
     return response.response;
   }
@@ -131,7 +147,7 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
   ): ReadableStream<string> & AsyncIterable<string> {
     this.ensureNotDestroyed();
 
-    const messages = this.processPromptInput(input);
+    const messages = this.convertLanguageModelMessages(input);
     this._conversationHistory.push(...messages);
 
     const stream = new ReadableStream<string>({
@@ -151,6 +167,7 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
             role: "assistant",
             content: response.response,
           });
+          this._inputUsage += response.generationMetadata.totalTokens;
 
           controller.close();
         } catch (error) {
@@ -182,8 +199,8 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
     options?: LanguageModelAppendOptions,
   ): Promise<undefined> {
     this.ensureNotDestroyed();
-
-    // Your append implementation
+    const messages = this.convertLanguageModelMessages(input);
+    this._conversationHistory.push(...messages);
     return undefined;
   }
 
@@ -203,7 +220,7 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
   }
 
   static async params(): Promise<LanguageModelParams> {
-    return new Promise((resolve) => resolve(this.defaultParams));
+    return new Promise((resolve) => resolve(MODEL.params));
   }
 
   private ensureNotDestroyed(): void {
@@ -220,19 +237,47 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
     return undefined;
   }
 
-  private processPromptInput(
-    input: LanguageModelPrompt,
-  ): LanguageModelMessage[] {
-    if (typeof input === "string") {
-      // Convert string to message format
-      return [
-        {
-          role: "user",
-          content: input,
-        },
-      ];
+  private convertLanguageModelMessage = (
+    message: LanguageModelMessage | LanguageModelSystemMessage,
+  ): LanguageModelPolyfillMessage => {
+    let content = "";
+    if (Array.isArray(message.content)) {
+      const hasImageOrAudio = message.content.find(
+        (c) => c.type === "image" || c.type === "audio",
+      );
+      if (hasImageOrAudio) {
+        throw new Error(
+          "Multimodal inputs are not yet supported by this polyfill",
+        );
+      }
+      content = message.content
+        .filter((c) => c.type === "text")
+        .map((c) => c.value)
+        .join("\n");
+    } else {
+      content = message.content;
     }
-    return input;
+    return {
+      role: message.role,
+      content,
+    };
+  };
+
+  private convertLanguageModelMessages(
+    messages: LanguageModelPrompt,
+  ): Array<LanguageModelPolyfillMessage> {
+    if (Array.isArray(messages)) {
+      return messages.map((message) =>
+        this.convertLanguageModelMessage(message),
+      );
+    }
+
+    return [
+      {
+        role: "user",
+        content: messages,
+      },
+    ];
   }
 }
 

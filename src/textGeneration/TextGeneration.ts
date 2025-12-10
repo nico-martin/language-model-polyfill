@@ -11,6 +11,7 @@ import {
 import { MODEL } from "../constants";
 import calculateDownloadProgress from "./utils/calculateDownloadProgress";
 import isFileInCache from "./utils/isFileInCache";
+import { LanguageModelPolyfillMessage } from "../types";
 
 interface Pipeline {
   tokenizer: PreTrainedTokenizer;
@@ -66,7 +67,7 @@ export default class TextGeneration {
   };
 
   public prompt = async (
-    messages: Array<LanguageModelMessage | LanguageModelSystemMessage>,
+    messages: Array<LanguageModelPolyfillMessage>,
     temperature: number,
     topK: number,
     signal: AbortSignal,
@@ -82,6 +83,7 @@ export default class TextGeneration {
       useKvCache: boolean;
       temperature: number;
       topK: number;
+      totalTokens: number;
     };
   }> => {
     if (!this.pipeline) throw new Error("Pipeline not loaded");
@@ -96,14 +98,7 @@ export default class TextGeneration {
       new Error("Signal aborted");
     });
 
-    const textGenerationMessages: Array<Message> = messages.map((message) => {
-      return {
-        role: message.role,
-        content: message.content.toString(),
-      };
-    });
-
-    const input = tokenizer.apply_chat_template(textGenerationMessages, {
+    const input = tokenizer.apply_chat_template(messages, {
       //tools,
       add_generation_prompt: true,
       return_dict: true,
@@ -194,6 +189,7 @@ export default class TextGeneration {
         useKvCache: useCache,
         temperature,
         topK,
+        totalTokens: lengthOfInput + numTokens,
       },
     };
   };
@@ -223,5 +219,23 @@ export default class TextGeneration {
     }
 
     return "downloadable";
+  };
+
+  public countTokens = async (
+    messages: Array<LanguageModelPolyfillMessage>,
+  ): Promise<number> => {
+    if (!this.pipeline) throw new Error("Pipeline not loaded");
+    const { tokenizer } = this.pipeline;
+    const input = tokenizer.apply_chat_template(messages, {
+      add_generation_prompt: true,
+      return_dict: true,
+      // @ts-expect-error
+      enable_thinking: false,
+    }) as {
+      input_ids: Tensor;
+      attention_mask: number[] | number[][] | Tensor;
+    };
+
+    return input.input_ids.dims[1];
   };
 }
