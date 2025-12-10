@@ -114,8 +114,7 @@ See [examples/simple-app](./examples/simple-app) for a complete working example.
 - **Model**: `onnx-community/Qwen3-4B-ONNX`
 - **Size**: ~2.6 GB
 - **Quantization**: 4-bit floating point (q4f16)
-- **Context**: 10,000 tokens
-- **Max output**: 1,500 tokens
+- **Context Window**: 40,000 tokens
 
 ## License
 
