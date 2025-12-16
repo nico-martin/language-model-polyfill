@@ -117,6 +117,14 @@ See [examples/simple-app](./examples/simple-app) for a complete working example.
 - **Quantization**: 4-bit floating point (q4f16)
 - **Context Window**: 40,000 tokens
 
+Model information:  
+[https://huggingface.co/Qwen/Qwen3-4B](https://huggingface.co/Qwen/Qwen3-4B)
+
+ONNX conversation:  
+[https://huggingface.co/onnx-community/Qwen3-4B-ONNX](https://huggingface.co/onnx-community/Qwen3-4B-ONNX)
+
+> In my opinion, the Qwen3 is currently the best model for general tasks. However, there are a few limitations. It does not support tool calls, structured output and multimodal input. For this reason, it has not yet been implemented. However, I can well imagine relying on newer models in the future to implement these functionalities.
+
 ## License
 
 MIT © [Nico Martin](https://nico.dev)

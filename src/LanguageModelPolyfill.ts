@@ -140,6 +140,8 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
       },
     ]);
 
+    console.log(this.inputs);
+
     this._inputUsage += response.generationMetadata.totalTokens;
 
     return response.response;
@@ -205,6 +207,8 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
   ): Promise<undefined> {
     this.ensureNotDestroyed();
     this.messages.push(...this.convertLanguageModelMessages(input));
+    this.inputs.push(...this.languageModelPromptToLanguageModelMessages(input));
+
     return undefined;
   }
 

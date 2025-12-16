@@ -75,5 +75,36 @@ buttonGenerate.addEventListener("click", async () => {
   const answer = await session.prompt("Who is the hero in this poem", {
     signal: abortController.signal,
   });
+
+  const contextWindowTests = [
+    "What is the capital of France?",
+    "In my previous question, which country did I ask about?",
+    "List all the countries I've mentioned so far in chronological order.",
+    "What was the first question I asked you in this conversation?",
+    "How many questions have I asked you total, including this one?",
+    "Summarize all the topics we've discussed so far in one sentence.",
+    "What was the third question I asked?",
+    "Create a numbered list of every question I've asked, word for word.",
+    "Which question number is this one?",
+    "What patterns do you notice in my questioning style across all questions?",
+    "Repeat the exact wording of questions 2, 5, and 7.",
+    "How many times have I asked you to reference previous questions?",
+    "What was the longest question I've asked so far?",
+    "List all the numbers that have appeared in any of my questions.",
+    "What percentage of my questions asked you to recall previous information?",
+    "Create a timeline showing the evolution of topics from question 1 to now.",
+    "Which question was most similar to this current one?",
+    "Identify any questions that built upon answers from previous questions.",
+    "What was different between question 4 and question 8?",
+    "Provide a complete transcript of our conversation from the very beginning.",
+  ];
+
+  for (const question of contextWindowTests) {
+    console.log(
+      await session.prompt(question, { signal: abortController.signal }),
+    );
+    console.log(`${session.inputUsage}/${session.inputQuota}`);
+  }
+
   console.log(answer);
 });
