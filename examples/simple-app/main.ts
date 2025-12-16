@@ -76,7 +76,7 @@ buttonGenerate.addEventListener("click", async () => {
     signal: abortController.signal,
   });
 
-  const contextWindowTests = [
+  /*const contextWindowTests = [
     "What is the capital of France?",
     "In my previous question, which country did I ask about?",
     "List all the countries I've mentioned so far in chronological order.",
@@ -104,7 +104,7 @@ buttonGenerate.addEventListener("click", async () => {
       await session.prompt(question, { signal: abortController.signal }),
     );
     console.log(`${session.inputUsage}/${session.inputQuota}`);
-  }
+  }*/
 
   console.log(answer);
 });

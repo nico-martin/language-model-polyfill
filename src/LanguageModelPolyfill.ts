@@ -140,8 +140,6 @@ class LanguageModelPolyfill extends EventTarget implements LanguageModel {
       },
     ]);
 
-    console.log(this.inputs);
-
     this._inputUsage += response.generationMetadata.totalTokens;
 
     return response.response;
