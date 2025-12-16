@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Language Model Polyfill - CDN Example</title>
+</head>
+<body>
+<button id="btnLoad">Load</button>
+<button id="btnGenerate">Generate</button>
+<button id="btnAbort">Abort</button>
+<p id="output"></p>
+
+<script type="module">
+  if (!('LanguageModel' in window)) {
+    const { LanguageModelPolyfill } = await import('https://cdn.jsdelivr.net/npm/language-model-polyfill/+esm');
+    globalThis.LanguageModel = LanguageModelPolyfill;
+  }
+
+  const output = document.getElementById("output");
+  const buttonAbort = document.getElementById("btnAbort");
+  const buttonLoad = document.getElementById("btnLoad");
+  const buttonGenerate = document.getElementById("btnGenerate");
+
+  let abortController = new AbortController();
+
+  buttonAbort.addEventListener("click", () => {
+    abortController.abort();
+    abortController = new AbortController();
+  });
+
+  let session = null;
+  buttonLoad.addEventListener("click", async () => {
+    const availability = await LanguageModel.availability();
+    console.log(availability);
+    if (availability === "unavailable") {
+      alert("Model not available");
+      return;
+    }
+    buttonLoad.value = `loading (0%)`;
+
+    session = await LanguageModel.create({
+      signal: abortController.signal,
+      initialPrompts: [
+        {
+          role: "system",
+          content: "You are a mediator in a discussion between two departments.",
+        },
+      ],
+      monitor: function (m) {
+        m.addEventListener("downloadprogress", (e) => {
+          buttonLoad.textContent = `loading (${Math.round(e.loaded * 100 * 100) / 100}%)`;
+        });
+      },
+    });
+    buttonLoad.textContent = `loaded`;
+    buttonLoad.disabled = true;
+    buttonGenerate.disabled = false;
+  });
+
+  buttonGenerate.disabled = true;
+
+  buttonGenerate.addEventListener("click", async () => {
+    console.log("Button clicked");
+    if (!session) throw new Error("No session found!");
+
+    session.addEventListener("quotaoverflow", () => {
+      console.log("We've gone past the quota, and some inputs will be dropped!");
+    });
+
+    const stream = session.promptStreaming(
+      "Tell me a short poem in which you are the hero",
+      {
+        signal: abortController.signal,
+      },
+    );
+    const reader = stream.getReader();
+
+    let reply = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      reply += value;
+      output.textContent = reply;
+    }
+    console.log(`${session.inputUsage}/${session.inputQuota}`);
+
+    const answer = await session.prompt("Who is the hero in this poem", {
+      signal: abortController.signal,
+    });
+
+    console.log(answer);
+  });
+</script>
+</body>
+</html>

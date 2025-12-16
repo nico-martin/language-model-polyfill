@@ -52,7 +52,7 @@ console.log(response);
 <script type="module">
   import { LanguageModelPolyfill } from 'https://cdn.jsdelivr.net/npm/language-model-polyfill/+esm';
 
-  if (!window.LanguageModel) {
+  if (!('LanguageModel' in window)) {
     window.LanguageModel = LanguageModelPolyfill;
   }
 
@@ -61,6 +61,25 @@ console.log(response);
   // ...
 </script>
 ```
+
+### Using a CDN conditionally
+
+For better performance, load the polyfill only when needed using dynamic imports:
+
+```html
+<script type="module">
+  // Load polyfill only if native LanguageModel API is not available
+  if (!('LanguageModel' in window)) {
+    const { LanguageModelPolyfill } = await import('https://cdn.jsdelivr.net/npm/language-model-polyfill/+esm');
+    window.LanguageModel = LanguageModelPolyfill;
+  }
+
+  // Now use the API (native or polyfilled)
+  const session = await window.LanguageModel.create();
+</script>
+```
+
+This approach ensures the polyfill is only downloaded and executed in browsers that don't have native support.
 
 ### Automatic Polyfill
 
